@@ -5,6 +5,21 @@ project may already be relying on, a **minor** bump adds a rule or a document, a
 clarifies wording without changing what is required. The version in effect on a project is
 recorded in its `memory-bank/techContext.md` at bootstrap.
 
+## 2.1.1 — 2026-09-05
+
+### Fixed
+
+- The Memory Bank rule and the Task protocol contradicted each other. 2.1.0 made the Approve step
+  write the plan into `activeContext.md`, while the rule still said the file changes "for exactly
+  two reasons", neither of them Approve. Under `CLAUDE.md`'s own *Order of authority* that is a
+  halt condition, so the rule now names four moments: Approve writes the plan, a plan step is
+  marked as it verifiably completes, a mid-task stop leaves a next-step note, and Record replaces
+  the plan.
+- A plan step is now marked the moment it finishes rather than at the end of the task. The owner
+  clears the session whenever they choose, not only when told it is safe, so step marks written
+  late are step marks lost. Marking a finished step is verified state, not the busywork the same
+  rule forbids.
+
 ## 2.1.0 — 2026-09-05
 
 The project's session boundary is `/clear`, not `/compact`. The two are not equivalent, and the

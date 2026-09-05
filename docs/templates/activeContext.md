@@ -32,7 +32,9 @@ What was accepted, and the gate log that proves it. One or two lines.
 - **Undo:** the checkpoint commit or tag to return to.
 - **Decisions that govern this work:** by number, or `none`.
 
-Steps, each marked `[ ]` open, `[x]` done, or `[!]` blocked:
+Steps, each marked `[ ]` open, `[x]` done, or `[!]` blocked. A step is marked the moment it is
+verifiably finished, not at the end of the task: the owner may clear the session at any point, and
+these marks are what the next one resumes from.
 
 - [ ] Step one
 - [ ] Step two
