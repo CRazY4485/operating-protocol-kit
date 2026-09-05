@@ -32,6 +32,7 @@ printed so they are not invisible.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -127,6 +128,14 @@ PLACEHOLDER = re.compile(r"[<>*]|NNNN")
 # both are created by bootstrap or by a gate run, so absent is valid until the
 # root is. Tier 1 completeness under memory-bank/ is check_memory_bank's job.
 CONDITIONAL_ROOTS = ("memory-bank", "logs")
+
+# Directories kept out of the "did you mean" corpus below. memory-bank/ is the
+# one that matters: the house style names its files by shorthand, so
+# `decisions/decisions.md` in CLAUDE.md is a path-suffix of the real
+# memory-bank/decisions/decisions.md the moment a project bootstraps. With that
+# tree in the corpus the gate would turn red on kit text nobody had touched,
+# and only after an install had already gone green.
+CORPUS_EXCLUDED = {".git", "memory-bank", "logs", "__pycache__", "node_modules"}
 DECISION_FILE = re.compile(r"^(\d{4})-[a-z0-9-]+\.md$")
 
 
@@ -244,14 +253,31 @@ def check_references(relative: str, lines: list[str], anchors: set[str]) -> None
             error(relative, number, f"reference *{candidate}* resolves to no section or label")
 
 
-def check_paths(root: Path, relative: str, lines: list[str]) -> None:
+def collect_repository_files(root: Path) -> list[str]:
+    """Every file an incomplete reference could actually have meant."""
+    found: list[str] = []
+    for folder, folders, names in os.walk(root):
+        folders[:] = [name for name in folders if name not in CORPUS_EXCLUDED]
+        base = Path(folder).relative_to(root)
+        found.extend((base / name).as_posix() for name in names)
+    return sorted(found)  # sorted so the reported suggestion is deterministic
+
+
+def check_paths(root: Path, relative: str, lines: list[str], corpus: list[str]) -> None:
     """Referenced files exist. A reference to a file that moved is silent rot:
     the sentence still reads correctly and points nowhere."""
     for number, text in strip_code_blocks(lines):
-        targets = [(target, "link target") for target in MARKDOWN_LINK.findall(text)]
-        targets += [(target, "reference") for target in BACKTICKED.findall(text)
+        backticked = BACKTICKED.findall(text)
+        # `required` targets must resolve. The rest are checked only for the
+        # incomplete form — a real file written without its directory prefix —
+        # and stay silent otherwise, which is what keeps bare shorthand and
+        # example identifiers out of the findings.
+        targets = [(target, "link target", True) for target in MARKDOWN_LINK.findall(text)]
+        targets += [(target, "reference", True) for target in backticked
                     if target.startswith(GOVERNED_PREFIXES)]
-        for target, kind in targets:
+        targets += [(target, "reference", False) for target in backticked
+                    if "/" in target and not target.startswith(GOVERNED_PREFIXES)]
+        for target, kind, required in targets:
             if target.startswith(("http://", "https://", "mailto:", "#", "/")):
                 continue
             if PLACEHOLDER.search(target):
@@ -264,7 +290,13 @@ def check_paths(root: Path, relative: str, lines: list[str]) -> None:
                 continue
             if (root / candidate).exists():
                 continue
-            error(relative, number, f"{kind} `{target}` points at no file in the repository")
+            complete = [f for f in corpus if f.endswith("/" + candidate)]
+            if complete:
+                also = f" (and {len(complete) - 1} more)" if len(complete) > 1 else ""
+                error(relative, number,
+                      f"{kind} `{target}` is incomplete; the file is at `{complete[0]}`{also}")
+            elif required:
+                error(relative, number, f"{kind} `{target}` points at no file in the repository")
 
 
 def check_first_person(relative: str, lines: list[str]) -> None:
@@ -366,6 +398,7 @@ def main() -> int:
                 documents[extra] = lines
 
     anchors = collect_anchors(documents)
+    corpus = collect_repository_files(root)
     for relative, lines in documents.items():
         if relative in BUDGETS:
             check_budget(relative, lines, BUDGETS[relative])
@@ -373,7 +406,7 @@ def main() -> int:
         # CHANGELOG.md is exempt: it records the paths that were in force at each
         # release, and a path that has since moved is correct history there.
         if relative != "CHANGELOG.md":
-            check_paths(root, relative, lines)
+            check_paths(root, relative, lines, corpus)
         check_first_person(relative, lines)
 
     check_memory_bank(root)

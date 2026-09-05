@@ -75,8 +75,20 @@ in its `-rf` spelling, and the hooks name `python3` rather than `python`.
   the house style names Memory Bank files by bare name — `techContext.md`, not
   `memory-bank/techContext.md` — so that form stays unchecked and `check_memory_bank` keeps
   covering Tier 1. `CHANGELOG.md` is exempt, because a path that has since moved is correct history
-  there. The check narrows the gap rather than closing it: it catches a governed path that stopped
-  existing, not one written without its prefix.
+  there.
+- **A reference written without its directory prefix is reported with the real path.** A path that
+  moved is the rot this kit has actually suffered: 2.0.0 put the gate under `.claude/`, and a
+  document still saying `tools/check-docs.py` would have read correctly and pointed nowhere. That
+  form is not an unresolvable path but an incomplete one — it is a path-suffix of a file that does
+  exist — so any backticked token holding a `/` is now tested for it, and reported as
+  "`tools/check-docs.py` is incomplete; the file is at `.claude/tools/check-docs.py`". A token that
+  matches nothing stays silent, which is what keeps example identifiers such as `src/` and
+  `signal/strategy` out of the findings. `memory-bank/` and `logs/` are held out of the corpus of
+  candidate files: the house style names Memory Bank files by shorthand, so `decisions/decisions.md`
+  becomes a suffix of the real `memory-bank/decisions/decisions.md` the moment a project bootstraps,
+  and without the exclusion the gate would turn red on five references in kit text nobody had
+  touched — after the install had already gone green. Both forms were measured against this document
+  set and against a bootstrapped project, and report nothing on either.
 - `BOOTSTRAP.md` step 3 now proves all three hooks start, not only `InstructionsLoaded`.
 - `README.md` describes the three states the document gate reads — pre-bootstrap,
   bootstrap-in-progress, post-bootstrap — so its output changing mid-install is expected.
