@@ -5,6 +5,32 @@ project may already be relying on, a **minor** bump adds a rule or a document, a
 clarifies wording without changing what is required. The version in effect on a project is
 recorded in its `memory-bank/techContext.md` at bootstrap.
 
+## 2.0.0 — 2026-09-05
+
+Breaking: the installed layout changed. A project installed from 1.x moves `tools/check-docs.py`
+to `.claude/tools/check-docs.py` and `KIT_VERSION` to `.claude/KIT_VERSION`, then re-runs
+`git config core.hooksPath .githooks`.
+
+### Changed
+
+- The kit's machinery moved under `.claude/`, so a project gains three visible entries rather than
+  five: `CLAUDE.md`, `docs/` and `memory-bank/`. Each is something a person is meant to read.
+  `.githooks/` deliberately stayed outside `.claude/`: it is git's directory, and the layer that
+  fails closed must not depend on Claude Code being present.
+- `memory-bank/` deliberately stayed at the project root rather than moving under `docs/`. `docs/`
+  holds rules copied unchanged into every project; `memory-bank/` holds state that changes every
+  task, and its absence is the signal that a project is still pre-implementation.
+- The document gate no longer requires the language rule files. A project that uses no MQL5 deletes
+  `mql5.md`, and that is a correct install rather than a missing document.
+
+### Added
+
+- `install.sh` and `install.ps1`. They derive the copy set from `git ls-files`, so `.gitignore` is
+  the single source of truth and a cache or build artefact can never reach a project; they refuse a
+  dirty working tree so the install is reversible; they leave existing files untouched and write
+  the kit's version as `<name>.kit-new`; they append to `.gitignore` rather than replacing it; they
+  set `core.hooksPath`; and they run the gate once so the install is proven rather than assumed.
+
 ## 1.1.0 — 2026-09-05
 
 ### Added
@@ -34,8 +60,8 @@ git history, so a project could not tell which revision it had been given.
 
 ### Added
 
-- `README.md`, `KIT_VERSION`, `CHANGELOG.md`: entry point, version, and change history.
-- `tools/check-docs.py`: the gate for the governed documents — encoding and line shape, word and
+- `README.md`, `.claude/KIT_VERSION`, `CHANGELOG.md`: entry point, version, and change history.
+- `.claude/tools/check-docs.py`: the gate for the governed documents — encoding and line shape, word and
   line budgets, cross-reference resolution, Tier 1 completeness, decision-index integrity, the
   first-person ban, and the presence of a version.
 - `.claude/settings.json`: denied destructive commands and secret-file reads, a `PreToolUse` hook

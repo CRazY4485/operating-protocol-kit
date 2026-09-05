@@ -93,21 +93,21 @@
 ```
 project-root/
 ├── CLAUDE.md                     # Process protocol (how work is done)
-├── README.md                     # What the document set is, and how it installs
-├── KIT_VERSION                   # Recorded in techContext.md at bootstrap
 ├── docs/
 │   ├── ARCHITECTURAL_CONSTITUTION.md
 │   ├── BOOTSTRAP.md              # One-time project setup procedure
 │   ├── decision-format.md        # What earns a decision record, and its shape
 │   └── templates/                # Decision index, superseded list, sub-agent brief
-├── .claude/
-│   ├── rules/                    # Path-scoped language and document rules
-│   ├── hooks/                    # Hook scripts referenced by settings.json
-│   └── settings.json             # Denied commands and paths; enforced hooks
-├── tools/                        # Gate scripts, starting with check-docs.py
-├── logs/                         # Gate evidence, git-ignored, written by the gate
 ├── memory-bank/                  # Project context and state, created at bootstrap
 │   └── decisions/                # Decision index + one file per decision
+├── .claude/                      # Kit machinery — nothing here is read by hand
+│   ├── rules/                    # Path-scoped language and document rules
+│   ├── hooks/                    # Hook scripts referenced by settings.json
+│   ├── tools/                    # Gate scripts, starting with check-docs.py
+│   ├── settings.json             # Denied commands and paths; enforced hooks
+│   └── KIT_VERSION               # Recorded in techContext.md at bootstrap
+├── .githooks/pre-commit          # The gate that fails closed; git-owned, not Claude's
+├── logs/                         # Gate evidence, git-ignored, written by the gate
 ├── src/<package>/                # Primary runtime
 │   ├── modules/                  # Feature modules — each self-contained
 │   ├── shared/                   # Reusable utilities, constants, types, base classes

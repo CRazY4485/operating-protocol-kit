@@ -49,8 +49,9 @@ its brief, and its text is reviewed against them before acceptance.
 - **Wrapping.** Governed documents wrap at 100 columns so a diff shows the sentence that changed
   rather than the whole paragraph. `CLAUDE.md` is the single stated exception: its budget is
   measured in lines, so wrapping it would corrupt the measure.
-- **Budgets** are declared in `tools/check-docs.py` and stated in `CLAUDE.md`, *Document budgets*.
-  A document over budget is compressed or its budget is challenged; it is never quietly exceeded.
+- **Budgets** are declared in `.claude/tools/check-docs.py` and stated in `CLAUDE.md`,
+  *Document budgets*. A document over budget is compressed or its budget is challenged; it is
+  never quietly exceeded.
 - **References name a section, decisions name a number.** A cross-reference is written in
   italics and must match a real heading or bold label somewhere in the document set — the gate
   resolves every one. A decision is cited as `decision 0004`.
@@ -66,11 +67,11 @@ its brief, and its text is reviewed against them before acceptance.
 
 ## Gate
 
-`python tools/check-docs.py` is the gate for every governed document, and part of the project's
-single gate command. It checks encoding and line shape, word and line budgets, cross-reference
-resolution, Tier 1 completeness, the decision index against the decision files, the first-person
-ban above, and the presence of `KIT_VERSION`. It exits non-zero on any error and prints every
-finding with its file and line.
+`python .claude/tools/check-docs.py` is the gate for every governed document, and part of the
+project's single gate command. It checks encoding and line shape, word and line budgets,
+cross-reference resolution, Tier 1 completeness, the decision index against the decision files,
+the first-person ban above, and the presence of `.claude/KIT_VERSION`. It exits non-zero on any
+error and prints every finding with its file and line.
 
 It runs in two places. A `PreToolUse` hook in `.claude/settings.json` runs it before any
 `git commit` for fast feedback, but Claude Code treats a hook it cannot start, or one that times

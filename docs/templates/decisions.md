@@ -19,5 +19,5 @@ Example rows, for shape only — they are not decisions and are not copied into 
 | 0003 | Pre-authorised zone: tests, formatting, docstrings — unasked     | active           |
 ```
 
-`tools/check-docs.py` checks this table against the files in this directory: every number listed
-must have a record, and every record must be listed.
+`.claude/tools/check-docs.py` checks this table against the files in this directory: every number
+listed must have a record, and every record must be listed.

@@ -12,7 +12,7 @@ indent_size = 2
 
 # Rule documents wrap at 100 columns. CLAUDE.md is the deliberate exception:
 # its budget is measured in lines, so it is not wrapped. See CLAUDE.md,
-# *Document budgets*, and tools/check-docs.py.
+# *Document budgets*, and .claude/tools/check-docs.py.
 [docs/**.md]
 max_line_length = 100
 

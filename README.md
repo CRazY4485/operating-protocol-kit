@@ -4,7 +4,10 @@ A copy-in document set that governs how an AI coding assistant works on a projec
 planned, verified, recorded, and stopped. It contains no project facts, so it is copied into a new
 repository unchanged and configured per project through `memory-bank/techContext.md`.
 
-Version: see `KIT_VERSION`. Changes: see `CHANGELOG.md`.
+Version: see `.claude/KIT_VERSION`. Changes: see `CHANGELOG.md`.
+
+`README.md`, `CHANGELOG.md`, `install.sh` and `install.ps1` describe the kit itself and stay
+with it. Everything else is copied into the project.
 
 ## What each file is, and when it is read
 
@@ -17,8 +20,9 @@ Version: see `KIT_VERSION`. Changes: see `CHANGELOG.md`.
 | `docs/BOOTSTRAP.md` | Once, when implementation begins | One-time project setup, step by step |
 | `docs/decision-format.md` | When a decision record is written | What earns a record, and its structure |
 | `docs/templates/` | At bootstrap, and per delegation | Starting files for the decision index and sub-agent briefs |
-| `tools/check-docs.py` | Every gate run, and before every commit | The gate for these documents |
+| `.claude/tools/check-docs.py` | Every gate run, and before every commit | The gate for these documents |
 | `.claude/settings.json` | Enforced by the client, not read | Denied commands and paths, and the hooks |
+| `.claude/KIT_VERSION` | At bootstrap, and at session start | The version of the document set in force |
 | `.githooks/pre-commit` | Enforced by git on every commit | The document gate, as the layer that fails closed |
 | `memory-bank/` | Tiered, per task | Project state — created at bootstrap, not shipped with the kit |
 
@@ -27,8 +31,20 @@ project is still pre-implementation; see `CLAUDE.md`, *Session start*.
 
 ## Installing it in a project
 
-1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `.githooks/`, `tools/`, `KIT_VERSION`, `.gitignore`,
-   `.gitattributes` and `.editorconfig` into the repository root. `README.md` and `CHANGELOG.md`
+The script does all six steps below, refuses to touch a dirty working tree so the install is
+undoable with `git checkout . && git clean -fd`, and never overwrites a file you already have — it
+writes the kit's version beside it as `<name>.kit-new` for you to merge:
+
+```text
+./install.sh /path/to/project
+.\install.ps1 C:\path\to\project       # the same thing, from PowerShell
+```
+
+To do it by hand instead:
+
+1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `.githooks/`, `.gitignore`, `.gitattributes` and
+   `.editorconfig` into the repository root — or run `install.sh` / `install.ps1`, which copies
+   exactly this set and performs step 3 for you. `README.md` and `CHANGELOG.md`
    describe the kit itself and stay with it; they are not copied. Do not copy `memory-bank/`
    either — bootstrap creates it, and its absence is what marks a project as pre-implementation.
 2. Delete the language rule files the project does not use. A language in use with no rule file is
@@ -46,7 +62,7 @@ project is still pre-implementation; see `CLAUDE.md`, *Session start*.
 5. Run the document gate. It must pass before any project work begins:
 
    ```text
-   python tools/check-docs.py
+   python .claude/tools/check-docs.py
    ```
 
 6. Follow `docs/BOOTSTRAP.md` from step 1. It ends with a stated exit condition and is never read
@@ -76,11 +92,12 @@ when Python is absent, and including for commits nobody asked Claude to make.
 ## Requirements
 
 - Git.
-- Python 3.9 or later, for `tools/check-docs.py` and the hook scripts. Standard library only; no
+- Python 3.9 or later, for `.claude/tools/check-docs.py` and the hook scripts. Standard library only; no
   packages to install. `.githooks/pre-commit` finds it as `python3`, `python`, or the Windows `py`
   launcher, and probes the version rather than trusting the name — on Windows, `python.exe` on
   `PATH` is often the Microsoft Store app-execution alias, which is not an interpreter. If none of
   the three is a real Python 3.9+, the hook refuses the commit instead of skipping the check.
+- Git 2.9 or later, for `core.hooksPath`.
 - Claude Code recent enough to support `.claude/rules/` with `paths:` frontmatter and the
   `InstructionsLoaded` hook. Step 3 above is the check; if rules do not load, move their content
   into directory-scoped `CLAUDE.md` files beside the code they govern and record which mechanism

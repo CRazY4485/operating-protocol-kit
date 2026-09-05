@@ -15,12 +15,12 @@ Checks performed:
   5. Decision index      - every number in the index table has a matching
      decisions/NNNN-*.md file, and every such file appears in the index.
   6. Authored voice      - no first-person commentary in project deliverables.
-  7. Kit version         - KIT_VERSION exists and is a semantic version.
+  7. Kit version         - .claude/KIT_VERSION exists and is a semantic version.
 
 Usage:
-    python tools/check-docs.py            # from the repository root
-    python tools/check-docs.py --root DIR
-    python tools/check-docs.py --hook     # exit 2 on failure, for a PreToolUse hook
+    python .claude/tools/check-docs.py            # from the repository root
+    python .claude/tools/check-docs.py --root DIR
+    python .claude/tools/check-docs.py --hook     # exit 2 on failure, for a PreToolUse hook
 
 Exit code 0 means every check passed. Exit code 1 means at least one ERROR.
 With --hook the failure code is 2, which is what Claude Code requires a
@@ -62,6 +62,15 @@ BUDGETS: dict[str, dict[str, int | None]] = {
     ".claude/rules/markdown.md": {"words": 1400, "lines": None, "wrap": WRAP_LIMIT},
     ".claude/rules/dotnet.md": {"words": 2600, "lines": None, "wrap": WRAP_LIMIT},
     ".claude/rules/mql5.md": {"words": 2600, "lines": None, "wrap": WRAP_LIMIT},
+}
+
+# Language rule files are installed per project: a project that uses no MQL5
+# deletes mql5.md, and that is a correct install rather than a missing document.
+# Everything else in BUDGETS is required, and its absence is an error.
+OPTIONAL_DOCUMENTS = {
+    ".claude/rules/python.md",
+    ".claude/rules/dotnet.md",
+    ".claude/rules/mql5.md",
 }
 
 # Tier 1 files, read at the start of every task. Budgets are starting figures
@@ -268,13 +277,13 @@ def check_decisions(root: Path) -> None:
 
 
 def check_version(root: Path) -> None:
-    path = root / "KIT_VERSION"
+    path = root / ".claude" / "KIT_VERSION"
     if not path.exists():
-        error("KIT_VERSION", 0, "file is missing; the document set carries no version")
+        error(".claude/KIT_VERSION", 0, "file is missing; the document set carries no version")
         return
     value = path.read_text(encoding="utf-8").strip()
     if not SEMVER.match(value):
-        error("KIT_VERSION", 0, f"{value!r} is not a semantic version such as 1.0.0")
+        error(".claude/KIT_VERSION", 0, f"{value!r} is not a semantic version such as 1.0.0")
 
 
 # --------------------------------------------------------------------------
@@ -295,7 +304,8 @@ def main() -> int:
     for relative in BUDGETS:
         path = root / relative
         if not path.exists():
-            error(relative, 0, "governed document is missing")
+            if relative not in OPTIONAL_DOCUMENTS:
+                error(relative, 0, "governed document is missing")
             continue
         lines = check_shape(root, relative, path.read_bytes())
         if lines is not None:

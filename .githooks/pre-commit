@@ -24,7 +24,7 @@ set -u
 MINIMUM_PYTHON_MINOR=9
 
 root=$(git rev-parse --show-toplevel) || exit 1
-gate="$root/tools/check-docs.py"
+gate="$root/.claude/tools/check-docs.py"
 
 if [ ! -f "$gate" ]; then
     printf 'pre-commit: %s is missing, so the document gate cannot run.\n' "$gate" >&2

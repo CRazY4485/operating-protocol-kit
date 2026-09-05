@@ -44,8 +44,8 @@ budget.
   successor's number and the supersede date.
 - Code and documents cite a decision by number (`decision 0004`), never by title: a title can
   change, a number cannot.
-- `tools/check-docs.py` checks that every number in the index has a matching `NNNN-*.md` file and
-  that every such file appears in the index.
+- `.claude/tools/check-docs.py` checks that every number in the index has a matching `NNNN-*.md`
+  file, and that every such file appears in the index.
 
 ## Structure of a record (`NNNN-short-title.md`)
 

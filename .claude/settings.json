@@ -18,7 +18,7 @@
       "PowerShell(Remove-Item * -Recurse*)"
     ],
     "ask": [
-      "Edit(/tools/check-docs.py)",
+      "Edit(/.claude/tools/check-docs.py)",
       "Edit(/.claude/settings.json)",
       "Edit(/.gitattributes)",
       "Bash(git tag *)",
@@ -52,7 +52,7 @@
             "if": "Bash(git commit *)",
             "command": "python",
             "args": [
-              "${CLAUDE_PROJECT_DIR}/tools/check-docs.py",
+              "${CLAUDE_PROJECT_DIR}/.claude/tools/check-docs.py",
               "--root",
               "${CLAUDE_PROJECT_DIR}",
               "--hook"
