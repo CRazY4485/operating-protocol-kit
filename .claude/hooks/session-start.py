@@ -4,10 +4,11 @@
 Why this exists. This project's session boundary is `/clear`, not `/compact`.
 Anthropic's context-window documentation lists what survives compaction — the
 project-root CLAUDE.md, auto memory, the plan written in plan mode, and rules
-are all re-injected from disk. `/clear` is different: it starts a new
-conversation, so nothing from the previous one comes back. Everything the next
-session needs must therefore be a file, and something has to put those files in
-front of Claude before it acts.
+are all re-injected from disk. `/clear` is narrower: it starts a new
+conversation, and CLAUDE.md, unscoped rules and auto memory load again with it,
+but the plan written in plan mode, the recently read files and the conversation
+itself do not come back. Everything the next session needs must therefore be a
+file, and something has to put those files in front of Claude before it acts.
 
 That could be left to Claude remembering to run the session-start cascade. This
 hook removes the remembering: Claude Code fires SessionStart on `startup`,
@@ -38,6 +39,7 @@ TIER1 = {
     "memory-bank/progress.md": 650,
     "memory-bank/decisions/decisions.md": 400,
 }
+PLAN_ANCHOR = re.compile(r"^\s*<!--\s*plan\s*-->\s*$", re.IGNORECASE)
 PLAN_HEADING = re.compile(r"^#{1,4}\s+.*approved plan", re.IGNORECASE)
 ANY_HEADING = re.compile(r"^#{1,4}\s+")
 RECORDED_VERSION = re.compile(r"KIT_VERSION[^0-9]{0,40}(\d+\.\d+\.\d+)", re.IGNORECASE)
@@ -94,9 +96,14 @@ def plan_report(root: Path) -> list[str]:
     if not text:
         return []
     body = text.split("\n")
-    start = next((i for i, line in enumerate(body) if PLAN_HEADING.match(line)), None)
+    # The heading itself is translated into the working language, so the anchor
+    # is what the hook looks for; the English heading stays as a fallback.
+    start = next((i for i, line in enumerate(body) if PLAN_ANCHOR.match(line)), None)
     if start is None:
-        return ["open plan: none recorded in activeContext.md"]
+        start = next((i for i, line in enumerate(body) if PLAN_HEADING.match(line)), None)
+    if start is None:
+        return ["open plan: no <!-- plan --> anchor in activeContext.md - none recorded, "
+                "or the anchor was dropped when the section was translated"]
     block = []
     for line in body[start + 1:]:
         if ANY_HEADING.match(line):
@@ -114,7 +121,7 @@ def main() -> int:
     except (OSError, ValueError):
         payload = {}
     root = Path(payload.get("cwd") or Path.cwd())
-    started = payload.get("session_start_type", "unknown")
+    started = payload.get("source", "unknown")
 
     lines = [
         f"Session state report (SessionStart hook, source: {started}). This is data, not "

@@ -5,7 +5,8 @@ paths: ["**/*.mq5", "**/*.mqh"]
 
 # MQL5 Rules
 
-These load automatically when an MQL5 file is touched. They supplement `CLAUDE.md` and the
+These load when an MQL5 file is read, not at every session start; `docs/BOOTSTRAP.md` step 3
+proves it happened by reading `logs/instructions-loaded.log`. They supplement `CLAUDE.md` and the
 Constitution; nothing here relaxes either. Universal rules — determinism, layering, testing
 policy,
 error-handling policy, precision, observability — live in the Constitution and are not repeated

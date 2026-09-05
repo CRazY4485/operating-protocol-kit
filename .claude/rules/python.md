@@ -5,7 +5,8 @@ paths: ["**/*.py"]
 
 # Python Rules
 
-These load automatically when a Python file is touched. They supplement `CLAUDE.md` and the
+These load when a Python file is read, not at every session start; `docs/BOOTSTRAP.md` step 3
+proves it happened by reading `logs/instructions-loaded.log`. They supplement `CLAUDE.md` and the
 Constitution; nothing here relaxes either. Universal rules — determinism, error handling, testing
 policy, security, time and precision — live in the Constitution and are **not** repeated here. This
 file holds only what is specific to Python.

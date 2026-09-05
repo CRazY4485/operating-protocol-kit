@@ -10,13 +10,22 @@
       "Read(**/id_ed25519)",
       "Read(~/.ssh/**)",
       "Read(~/.aws/**)",
-      "Bash(git reset --hard*)",
-      "Bash(git push --force*)",
-      "Bash(git push -f*)",
-      "Bash(git clean -fd*)",
-      "Bash(rm -rf *)",
-      "Bash(rm -fr *)",
-      "PowerShell(Remove-Item * -Recurse*)"
+      "Bash(git reset --hard *)",
+      "Bash(git push --force *)",
+      "Bash(git push --force-with-lease *)",
+      "Bash(git push -f *)",
+      "Bash(git clean -f *)",
+      "Bash(git clean -fd *)",
+      "Bash(git clean -d *)",
+      "Bash(rm *)",
+      "PowerShell(git reset --hard *)",
+      "PowerShell(git push --force *)",
+      "PowerShell(git push --force-with-lease *)",
+      "PowerShell(git push -f *)",
+      "PowerShell(git clean -f *)",
+      "PowerShell(git clean -fd *)",
+      "PowerShell(git clean -d *)",
+      "PowerShell(Remove-Item *)"
     ],
     "ask": [
       "Edit(/.claude/tools/check-docs.py)",
@@ -24,7 +33,10 @@
       "Edit(/.gitattributes)",
       "Bash(git tag *)",
       "Bash(git rebase *)",
-      "Bash(git filter-branch *)"
+      "Bash(git filter-branch *)",
+      "PowerShell(git tag *)",
+      "PowerShell(git rebase *)",
+      "PowerShell(git filter-branch *)"
     ]
   },
   "hooks": {
@@ -34,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python",
+            "command": "python3",
             "args": [
               "${CLAUDE_PROJECT_DIR}/.claude/hooks/log-instructions.py",
               "${CLAUDE_PROJECT_DIR}"
@@ -51,7 +63,20 @@
           {
             "type": "command",
             "if": "Bash(git commit *)",
-            "command": "python",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/tools/check-docs.py",
+              "--root",
+              "${CLAUDE_PROJECT_DIR}",
+              "--hook"
+            ],
+            "timeout": 60,
+            "statusMessage": "Running the document gate before commit..."
+          },
+          {
+            "type": "command",
+            "if": "PowerShell(git commit *)",
+            "command": "python3",
             "args": [
               "${CLAUDE_PROJECT_DIR}/.claude/tools/check-docs.py",
               "--root",
@@ -66,11 +91,11 @@
     ],
     "SessionStart": [
       {
-        "matcher": "startup|clear|resume|compact",
+        "matcher": "startup|clear|resume|compact|fork",
         "hooks": [
           {
             "type": "command",
-            "command": "python",
+            "command": "python3",
             "args": [
               "${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.py"
             ],

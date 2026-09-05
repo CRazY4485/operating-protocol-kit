@@ -5,14 +5,14 @@ paths: ["**/*.cs", "**/*.xaml", "**/*.csproj", "**/*.sln"]
 
 # .NET / WPF Rules
 
-These load automatically when a .NET or WPF file is touched. They supplement `CLAUDE.md` and the
-Constitution; nothing here relaxes either. Universal rules — determinism, layering, testing
-policy,
+These load when a .NET or WPF file is read, not at every session start; `docs/BOOTSTRAP.md` step 3
+proves it happened by reading `logs/instructions-loaded.log`. They supplement `CLAUDE.md` and the
+Constitution; nothing here relaxes either. Universal rules — determinism, layering, testing policy,
 error-handling policy, precision, observability — live in the Constitution and are not repeated
-here. This file holds what is specific to C#, .NET, and the WPF platform. Project and machine
-facts — the target framework and SDK version, paths, commands, operating system, workload
-installs — live in `techContext.md`. This file names no version, so it does not need editing when
-the project moves to the next one.
+here. This file holds what is specific to C#, .NET, and the WPF platform. Project and machine facts
+— the target framework and SDK version, paths, commands, operating system, workload installs — live
+in `techContext.md`. This file names no version, so it does not need editing when the project moves
+to the next one.
 
 ## The rule that outranks everything else here
 

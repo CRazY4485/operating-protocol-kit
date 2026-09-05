@@ -11,6 +11,15 @@
 # *.mq5  working-tree-encoding=UTF-16LE eol=CRLF
 # *.mqh  working-tree-encoding=UTF-16LE eol=CRLF
 
+# Visual Studio writes C# sources as UTF-8 with a BOM; VS Code writes them
+# without one. Git normalises line endings but not the BOM, so a mixed team
+# produces one-byte diffs on files nobody edited. `.editorconfig` sets
+# `charset = utf-8`, which means "no BOM" and settles it for editors that honour
+# it. Measure the checked-in files at bootstrap (BOOTSTRAP.md, step 3) with
+#     git ls-files -z '*.cs' | xargs -0 grep -lI $'\xef\xbb\xbf'
+# and record the answer in techContext.md. If the project must keep the BOM,
+# say so there and delete this block; do not leave the two conventions mixed.
+
 # MetaEditor compile logs are UTF-16 and are never normalised.
 *.log -text
 

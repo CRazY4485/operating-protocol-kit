@@ -43,12 +43,19 @@ writes the kit's version beside it as `<name>.kit-new` for you to merge:
 
 To do it by hand instead:
 
-1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `.githooks/`, `.gitignore`, `.gitattributes` and
-   `.editorconfig` into the repository root. `README.md` and `CHANGELOG.md` describe the kit
-   itself and stay with it; they are not copied. Do not copy `memory-bank/`
-   either — bootstrap creates it, and its absence is what marks a project as pre-implementation.
-2. Delete the language rule files the project does not use. A language in use with no rule file is
-   a blocker, not a gap to fill later.
+1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `.githooks/`, `.gitattributes` and `.editorconfig` into
+   the repository root. `README.md` and `CHANGELOG.md` describe the kit itself and stay with it;
+   they are not copied. Do not copy `memory-bank/` either — bootstrap creates it, and its absence
+   is what marks a project as pre-implementation.
+   `.gitignore` is the one file that is neither purely the kit's nor purely the project's: it stays
+   with the kit *and* goes into the project, and it is **merged, never replaced**. Append the kit's
+   `.gitignore` under a `# --- operating-protocol kit ---` marker line, keeping the project's own
+   rules above it. `install.sh` and `install.ps1` do exactly this, and skip the append when the
+   marker is already there.
+2. Delete the *language* rule files the project does not use — `python.md`, `dotnet.md`, `mql5.md`.
+   A language in use with no rule file is a blocker, not a gap to fill later. `markdown.md` is not
+   in that set and is never deleted: the kit's own governed documents are Markdown, so the gate
+   treats it as required.
 
 3. Point git at the committed hooks directory. Git never runs hooks from a directory it has not
    been told about, so this is one command per clone and it is what makes the gate binding:
@@ -64,6 +71,15 @@ To do it by hand instead:
    ```text
    python .claude/tools/check-docs.py
    ```
+
+   The gate reads three states, and which one it is in depends on `memory-bank/`, so its output
+   changes as the install progresses. **Pre-bootstrap:** `memory-bank/` is absent, the gate checks
+   the kit's own documents only, and that is a pass — the absence is the signal that the project is
+   pre-implementation, not a missing file. **Bootstrap in progress:** `memory-bank/` exists, so the
+   Tier 1 files are now required; a missing or empty one is an error, and an empty decision index is
+   a warning until step 9 of `BOOTSTRAP.md` fills it. **Post-bootstrap:** every Tier 1 file is
+   present and within budget, and the decision index matches the records on disk. Expect the gate to
+   start reporting more, not less, once step 6 begins.
 
 6. Follow `docs/BOOTSTRAP.md` from step 1. It ends with a stated exit condition and is never read
    again afterwards.
@@ -81,6 +97,14 @@ rules "are enforced by the client regardless of what Claude decides to do". Dest
 and secret-file reads are therefore configuration in `.claude/settings.json`, not promises in
 `CLAUDE.md`.
 
+Those rules match the command text of a tool call, so they have a documented edge: a rule covers
+the spellings it names, and `Bash` and `PowerShell` are separate prefixes needing separate rules.
+That is why `rm` is denied outright rather than as `rm -rf`, and why every destructive git rule is
+written twice. It is also why they stop at the tool boundary — a permission rule governs what
+Claude runs, not what a script Claude ran goes on to do. For enforcement below that line, Anthropic
+points at [sandboxing](https://code.claude.com/docs/en/sandboxing), which is an OS-level boundary
+and outside this kit's scope.
+
 That configuration has one limit worth stating plainly, because it decides where the gate lives.
 Claude Code treats a hook it cannot start — a missing interpreter, a bad path — and a hook that
 reaches its timeout as a **non-blocking** error, and the tool call proceeds. A `PreToolUse` hook
@@ -92,12 +116,14 @@ when Python is absent, and including for commits nobody asked Claude to make.
 **Continuity is a file, or it is nothing.** This project's session boundary is `/clear`, which
 starts a new conversation. Anthropic's documentation lists what a *compaction* re-injects from
 disk — the project CLAUDE.md, unscoped rules, auto memory, the plan written in plan mode, recently
-read files — but a cleared session gets none of the conversation back. So the approved plan lives
-in `memory-bank/activeContext.md` rather than in the transcript, and a `SessionStart` hook puts the
+read files. A `/clear` is narrower: both memory mechanisms load at the start of every conversation,
+so CLAUDE.md, unscoped rules and auto memory come back, but the plan written in plan mode, the
+recently read files and the conversation itself do not. So the approved plan lives in
+`memory-bank/activeContext.md` rather than in the transcript, and a `SessionStart` hook puts the
 project's state in front of Claude before the first turn. Auto memory is turned off in
-`.claude/settings.json`: it would survive `/clear`, but it lives outside the repository and outside
-git, is machine-local, and is invisible to the owner, so it cannot hold a record the owner is meant
-to audit.
+`.claude/settings.json` for a narrower reason: it does survive `/clear`, but it lives outside the
+repository and outside git, is machine-local and is not shared across machines, so it cannot hold a
+record the owner is meant to audit.
 
 ## Requirements
 
