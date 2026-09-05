@@ -110,6 +110,23 @@ HEADING = re.compile(r"^#{1,6}\s+(.*?)\s*$")
 BOLD_LABEL = re.compile(r"\*\*(.+?)\*\*")
 ITALIC_REF = re.compile(r"(?<!\*)\*([^*\n]{3,80})\*(?!\*)")
 INDEX_ROW = re.compile(r"^\|\s*(\d{4})\s*\|")
+
+# Referenced paths. Two forms are checked, and deliberately only two, because
+# both resolve cleanly against this document set:
+#   - a relative Markdown link target, [text](path)
+#   - a backticked path under the kit's own machinery directories
+# A backticked bare name such as `techContext.md` is house style for a Memory
+# Bank file and is not checked; neither is a slash command such as `/clear`,
+# which is not a path at all, nor anything holding a placeholder. Checking
+# every path-like token instead would report 28 correctly written references.
+MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+BACKTICKED = re.compile(r"`([^`\s]+)`")
+GOVERNED_PREFIXES = (".claude/", "docs/", ".githooks/")
+PLACEHOLDER = re.compile(r"[<>*]|NNNN")
+# Reachable only through a link target, since neither is a governed prefix:
+# both are created by bootstrap or by a gate run, so absent is valid until the
+# root is. Tier 1 completeness under memory-bank/ is check_memory_bank's job.
+CONDITIONAL_ROOTS = ("memory-bank", "logs")
 DECISION_FILE = re.compile(r"^(\d{4})-[a-z0-9-]+\.md$")
 
 
@@ -227,6 +244,29 @@ def check_references(relative: str, lines: list[str], anchors: set[str]) -> None
             error(relative, number, f"reference *{candidate}* resolves to no section or label")
 
 
+def check_paths(root: Path, relative: str, lines: list[str]) -> None:
+    """Referenced files exist. A reference to a file that moved is silent rot:
+    the sentence still reads correctly and points nowhere."""
+    for number, text in strip_code_blocks(lines):
+        targets = [(target, "link target") for target in MARKDOWN_LINK.findall(text)]
+        targets += [(target, "reference") for target in BACKTICKED.findall(text)
+                    if target.startswith(GOVERNED_PREFIXES)]
+        for target, kind in targets:
+            if target.startswith(("http://", "https://", "mailto:", "#", "/")):
+                continue
+            if PLACEHOLDER.search(target):
+                continue
+            candidate = target.split("#")[0].rstrip("/")
+            if not candidate or candidate in OPTIONAL_DOCUMENTS:
+                continue
+            head = candidate.split("/")[0]
+            if head in CONDITIONAL_ROOTS and not (root / head).exists():
+                continue
+            if (root / candidate).exists():
+                continue
+            error(relative, number, f"{kind} `{target}` points at no file in the repository")
+
+
 def check_first_person(relative: str, lines: list[str]) -> None:
     if relative in RULE_DOCUMENTS or relative.startswith(".claude/rules/"):
         return
@@ -270,6 +310,13 @@ def check_decisions(root: Path) -> None:
         for path in folder.iterdir()
         if (match := DECISION_FILE.match(path.name))
     }
+    # An empty index while memory-bank/ exists means bootstrap stopped before
+    # step 9. That is a real interrupted-bootstrap state, but it is also the
+    # legitimate window between creating the folder and writing the first
+    # record, so it warns rather than failing the commit.
+    if not indexed and not on_disk:
+        warn("memory-bank/decisions/decisions.md", 0,
+             "the decision index is empty - BOOTSTRAP.md step 9 records the first decisions")
     for number in sorted(indexed - on_disk):
         error("memory-bank/decisions/decisions.md", 0, f"decision {number} has no NNNN-*.md file")
     for number in sorted(on_disk - indexed):
@@ -323,6 +370,10 @@ def main() -> int:
         if relative in BUDGETS:
             check_budget(relative, lines, BUDGETS[relative])
         check_references(relative, lines, anchors)
+        # CHANGELOG.md is exempt: it records the paths that were in force at each
+        # release, and a path that has since moved is correct history there.
+        if relative != "CHANGELOG.md":
+            check_paths(root, relative, lines)
         check_first_person(relative, lines)
 
     check_memory_bank(root)

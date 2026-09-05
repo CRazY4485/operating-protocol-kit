@@ -161,6 +161,46 @@ if ($null -eq $interpreter) {
 
 $version = & $interpreter --version 2>&1
 Write-Host "Gate interpreter: $interpreter ($version)"
+
+# The hooks in .claude\settings.json are exec form: `command` must name a real
+# interpreter. The shipped default is `python3`, which a stock Windows install
+# does not have, and `python` there is often the Microsoft Store app-execution
+# alias rather than an interpreter. Claude Code treats a hook it cannot start as
+# a NON-BLOCKING error and proceeds, so a wrong name here disables the hooks
+# silently. Write the interpreter this machine just proved instead of guessing.
+$env:KIT_INTERPRETER = $interpreter
+$patchHooks = @'
+import json, os, sys
+
+interpreter = os.environ["KIT_INTERPRETER"]
+for path in sys.argv[1:]:
+    try:
+        with open(path, encoding="utf-8") as handle:
+            config = json.load(handle)
+    except (OSError, ValueError):
+        continue  # absent, or not ours to rewrite
+    changed = 0
+    for groups in config.get("hooks", {}).values():
+        for group in groups:
+            for hook in group.get("hooks", []):
+                if hook.get("args") and hook.get("command") != interpreter:
+                    hook["command"] = interpreter
+                    changed += 1
+    if not changed:
+        continue
+    try:
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(config, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+    except OSError:
+        print(f"WARNING: could not set the hook interpreter in {path}")
+        continue
+    print(f"set the hook interpreter to {interpreter} in {os.path.basename(path)} ({changed} hooks)")
+'@
+
+$patchHooks | & $interpreter - `
+    (Join-Path $Target ".claude\settings.json") `
+    (Join-Path $Target ".claude\settings.json.kit-new")
 Write-Host "Running the document gate once, so the install is proven rather than assumed:"
 Write-Host ""
 

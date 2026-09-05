@@ -6,9 +6,11 @@ paths:
 
 # Markdown and Authored Documents
 
-These load when a Markdown file is touched. They supplement `CLAUDE.md` and the Constitution;
-nothing here relaxes either. `CLAUDE.md`, *Authored documents*, holds the two process rules —
-approval before drafting, and the sub-agent brief. Everything about the prose itself lives here.
+These load when a Markdown file is read, not at every session start; `docs/BOOTSTRAP.md` step 3
+proves it happened by reading `logs/instructions-loaded.log`. They supplement `CLAUDE.md` and the
+Constitution; nothing here relaxes either. `CLAUDE.md`, *Authored documents*, holds the two process
+rules — approval before drafting, and the sub-agent brief. Everything about the prose itself lives
+here.
 
 ## Authored documents — the project's voice, never mine
 

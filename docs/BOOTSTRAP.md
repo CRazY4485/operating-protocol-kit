@@ -35,6 +35,12 @@ output; an unknown is asked, never assumed.
    - A rule file that does not appear is not a rule. If path-scoped rules are unsupported in the
      installed version, move their content to a directory-scoped `CLAUDE.md` beside the code they
      govern.
+   - Prove all three hooks start, not just this one. A hook Claude Code cannot start is a
+     *non-blocking* error: it is skipped silently and the action proceeds, so a wrong interpreter
+     name in `.claude/settings.json` disables them without a symptom. The log file existing proves
+     `InstructionsLoaded`; the state report opening the session proves `SessionStart`; a `git
+     commit` showing the gate's status message proves `PreToolUse`. Any of the three missing means
+     fixing `command` in `.claude/settings.json` to an interpreter this machine actually has.
    - Record which mechanism is in use, and the version of Claude Code that was checked, in
      `techContext.md` and as a decision record. This is a platform fact the whole process depends
      on, and an unverified platform fact is the thing a decision record exists to prevent.
