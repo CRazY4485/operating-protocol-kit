@@ -1,0 +1,67 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(*.secret)",
+      "Read(secrets/**)",
+      "Read(**/id_rsa)",
+      "Read(**/id_ed25519)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Bash(git reset --hard*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git clean -fd*)",
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "PowerShell(Remove-Item * -Recurse*)"
+    ],
+    "ask": [
+      "Edit(/tools/check-docs.py)",
+      "Edit(/.claude/settings.json)",
+      "Edit(/.gitattributes)",
+      "Bash(git tag *)",
+      "Bash(git rebase *)",
+      "Bash(git filter-branch *)"
+    ]
+  },
+  "hooks": {
+    "InstructionsLoaded": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/log-instructions.py",
+              "${CLAUDE_PROJECT_DIR}"
+            ],
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "python",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/tools/check-docs.py",
+              "--root",
+              "${CLAUDE_PROJECT_DIR}",
+              "--hook"
+            ],
+            "timeout": 120,
+            "statusMessage": "Running the document gate before commit..."
+          }
+        ]
+      }
+    ]
+  }
+}

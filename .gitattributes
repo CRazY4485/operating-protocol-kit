@@ -1,0 +1,21 @@
+# Default: normalise every text file to LF in the repository, UTF-8 on disk.
+# Constitution, *Portability*: one file must not change shape between machines.
+* text=auto eol=lf
+
+# --- Documented encoding exceptions ---------------------------------------
+# MetaEditor writes MQL5 sources as UTF-16LE on some builds. Detect the real
+# encoding at bootstrap (BOOTSTRAP.md, step 3) and record it in techContext.md.
+# If the sources are UTF-16, uncomment the two lines below; git then stores
+# them as UTF-8 and restores UTF-16LE in the working tree, so MetaEditor keeps
+# working and diffs stay readable. If they are UTF-8, delete this block.
+# *.mq5  working-tree-encoding=UTF-16LE eol=CRLF
+# *.mqh  working-tree-encoding=UTF-16LE eol=CRLF
+
+# MetaEditor compile logs are UTF-16 and are never normalised.
+*.log -text
+
+# --- Binary ----------------------------------------------------------------
+*.ex5  binary
+*.png  binary
+*.jpg  binary
+*.pdf  binary

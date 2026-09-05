@@ -1,0 +1,32 @@
+# Enforces the Constitution's *Portability* rule in the editor, so a file does
+# not change shape between machines before git ever sees it.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Rule documents wrap at 100 columns. CLAUDE.md is the deliberate exception:
+# its budget is measured in lines, so it is not wrapped. See CLAUDE.md,
+# *Document budgets*, and tools/check-docs.py.
+[docs/**.md]
+max_line_length = 100
+
+[.claude/rules/*.md]
+max_line_length = 100
+
+[CLAUDE.md]
+max_line_length = off
+
+[*.py]
+indent_size = 4
+
+[*.{cs,mq5,mqh}]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false

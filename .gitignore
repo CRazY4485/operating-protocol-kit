@@ -1,0 +1,27 @@
+# Secrets — real values never enter the repository.
+.env
+.env.*
+!.env.example
+secrets.*
+*.secret
+
+# Gate evidence: logs are written by the gate command, read by the owner,
+# and never committed (CLAUDE.md, *Quality gates*).
+logs/
+
+# Build output and caches
+bin/
+obj/
+build/
+dist/
+*.ex5
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local, machine-specific Claude Code settings
+.claude/settings.local.json
+CLAUDE.local.md
