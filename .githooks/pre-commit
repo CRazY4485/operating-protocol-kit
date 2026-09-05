@@ -1,0 +1,58 @@
+#!/bin/sh
+# Document gate, enforced by git rather than by the agent or the editor.
+#
+# Why this exists alongside the Claude Code PreToolUse hook: Claude Code treats
+# a hook that cannot start as a NON-BLOCKING error and lets the tool call
+# proceed, and a hook that reaches its timeout does not block a PreToolUse call
+# either. So if the interpreter is missing, that layer silently fails open.
+# Reference: https://code.claude.com/docs/en/hooks
+#
+# Git is the opposite: any non-zero exit here refuses the commit. This file is
+# therefore the layer that fails closed, and it protects the repository from
+# every committer — the agent, the owner, an IDE, or a script.
+#
+# Enable it once per clone (it is not automatic, because git never runs hooks
+# from a directory it has not been pointed at):
+#
+#     git config core.hooksPath .githooks
+#
+# To bypass it deliberately, `git commit --no-verify` is the only route, and
+# doing so requires an owner decision recorded per CLAUDE.md, *Gate integrity*.
+
+set -u
+
+MINIMUM_PYTHON_MINOR=9
+
+root=$(git rev-parse --show-toplevel) || exit 1
+gate="$root/tools/check-docs.py"
+
+if [ ! -f "$gate" ]; then
+    printf 'pre-commit: %s is missing, so the document gate cannot run.\n' "$gate" >&2
+    printf 'pre-commit: refusing the commit rather than letting it through unchecked.\n' >&2
+    exit 1
+fi
+
+# Find a usable interpreter. On Windows, `python` and `python3` may be the
+# Microsoft Store app-execution alias, which exists on PATH but is not a real
+# interpreter; the version probe below rejects it, and `py` is tried next.
+interpreter=""
+for candidate in python3 python py; do
+    command -v "$candidate" >/dev/null 2>&1 || continue
+    if "$candidate" -c "import sys; sys.exit(0 if sys.version_info >= (3, $MINIMUM_PYTHON_MINOR) else 1)" >/dev/null 2>&1; then
+        interpreter="$candidate"
+        break
+    fi
+done
+
+if [ -z "$interpreter" ]; then
+    printf 'pre-commit: no Python 3.%s+ interpreter found on PATH.\n' "$MINIMUM_PYTHON_MINOR" >&2
+    printf 'pre-commit: the document gate cannot run, so the commit is REFUSED rather\n' >&2
+    printf 'pre-commit: than allowed through unchecked. Install Python 3.%s or later,\n' "$MINIMUM_PYTHON_MINOR" >&2
+    printf 'pre-commit: then record the interpreter and its version in techContext.md.\n' >&2
+    exit 1
+fi
+
+"$interpreter" "$gate" --root "$root" || {
+    printf 'pre-commit: document gate failed; commit refused.\n' >&2
+    exit 1
+}

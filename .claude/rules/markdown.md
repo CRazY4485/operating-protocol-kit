@@ -72,6 +72,9 @@ resolution, Tier 1 completeness, the decision index against the decision files, 
 ban above, and the presence of `KIT_VERSION`. It exits non-zero on any error and prints every
 finding with its file and line.
 
-A `PreToolUse` hook in `.claude/settings.json` runs it before any `git commit`, so a document
-defect blocks the commit rather than reaching the repository. That hook is enforced configuration:
-it runs whatever I decide. See `CLAUDE.md`, *Quality gates*.
+It runs in two places. A `PreToolUse` hook in `.claude/settings.json` runs it before any
+`git commit` for fast feedback, but Claude Code treats a hook it cannot start, or one that times
+out, as a non-blocking error and lets the commit proceed — so that layer fails open and is not
+the gate. `.githooks/pre-commit` is the gate: git refuses a commit on any non-zero exit, so a
+missing interpreter blocks the commit instead of skipping the check. Enable it once per clone
+with `git config core.hooksPath .githooks`. See `CLAUDE.md`, *Quality gates*.

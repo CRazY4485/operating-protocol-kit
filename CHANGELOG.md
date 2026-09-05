@@ -5,6 +5,28 @@ project may already be relying on, a **minor** bump adds a rule or a document, a
 clarifies wording without changing what is required. The version in effect on a project is
 recorded in its `memory-bank/techContext.md` at bootstrap.
 
+## 1.1.0 — 2026-09-05
+
+### Added
+
+- `.githooks/pre-commit`: the document gate as a layer that fails closed. It resolves a Python
+  interpreter (`python3`, `python`, or the Windows `py` launcher), probes its version rather than
+  trusting the name, and refuses the commit when no usable interpreter is found. Enabled per clone
+  with `git config core.hooksPath .githooks`, which `BOOTSTRAP.md` step 1 now performs.
+
+### Changed
+
+- The enforcement story is stated accurately rather than optimistically. Anthropic's hook
+  documentation records that a hook which cannot start, or which reaches its timeout, is a
+  non-blocking error and that "on `PreToolUse`, a timed-out ... hook doesn't block the tool call".
+  The `PreToolUse` run of the gate therefore fails open, and `CLAUDE.md`, `README.md`,
+  `.claude/rules/markdown.md` and `BOOTSTRAP.md` now name it a fast signal, with git as the gate.
+- `BOOTSTRAP.md` step 10 requires two demonstrated refusals before bootstrap is complete: a deny
+  rule firing, and a commit refused by the document gate.
+- `Gate integrity` names `git commit --no-verify` among the bypasses that require a decision record.
+- The minimum Python version is stated as 3.9, matching what the gate actually needs and what the
+  hook probes for.
+
 ## 1.0.0 — 2026-09-05
 
 First versioned release. Prior to this the document set carried no version, no changelog and no

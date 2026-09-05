@@ -19,6 +19,7 @@ Version: see `KIT_VERSION`. Changes: see `CHANGELOG.md`.
 | `docs/templates/` | At bootstrap, and per delegation | Starting files for the decision index and sub-agent briefs |
 | `tools/check-docs.py` | Every gate run, and before every commit | The gate for these documents |
 | `.claude/settings.json` | Enforced by the client, not read | Denied commands and paths, and the hooks |
+| `.githooks/pre-commit` | Enforced by git on every commit | The document gate, as the layer that fails closed |
 | `memory-bank/` | Tiered, per task | Project state — created at bootstrap, not shipped with the kit |
 
 `memory-bank/` is deliberately absent from the kit. Its absence is what tells the assistant the
@@ -26,20 +27,29 @@ project is still pre-implementation; see `CLAUDE.md`, *Session start*.
 
 ## Installing it in a project
 
-1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `tools/`, `KIT_VERSION`, `.gitignore`, `.gitattributes`
-   and `.editorconfig` into the repository root. Do not copy `memory-bank/`; bootstrap creates it.
+1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `.githooks/`, `tools/`, `KIT_VERSION`, `.gitignore`,
+   `.gitattributes` and `.editorconfig` into the repository root. `README.md` and `CHANGELOG.md`
+   describe the kit itself and stay with it; they are not copied. Do not copy `memory-bank/`
+   either — bootstrap creates it, and its absence is what marks a project as pre-implementation.
 2. Delete the language rule files the project does not use. A language in use with no rule file is
    a blocker, not a gap to fill later.
-3. Start a session and run `/context`. The rule files must appear under **Memory files**. The
+
+3. Point git at the committed hooks directory. Git never runs hooks from a directory it has not
+   been told about, so this is one command per clone and it is what makes the gate binding:
+
+   ```text
+   git config core.hooksPath .githooks
+   ```
+4. Start a session and run `/context`. The rule files must appear under **Memory files**. The
    `InstructionsLoaded` hook also writes every load to `logs/instructions-loaded.log`, so the
    answer survives the session.
-4. Run the document gate. It must pass before any project work begins:
+5. Run the document gate. It must pass before any project work begins:
 
    ```text
    python tools/check-docs.py
    ```
 
-5. Follow `docs/BOOTSTRAP.md` from step 1. It ends with a stated exit condition and is never read
+6. Follow `docs/BOOTSTRAP.md` from step 1. It ends with a stated exit condition and is never read
    again afterwards.
 
 ## The two ideas the rest follows from
@@ -51,15 +61,26 @@ running window. The gate writes its own log; the assistant quotes it and gives i
 
 **What a tool can enforce does not belong in prose.** Anthropic's documentation is explicit that
 instruction files "shape Claude's behavior but are not a hard enforcement layer", while settings
-rules "are enforced by the client regardless of what Claude decides to do". Destructive commands,
-secret-file reads, and the document gate are therefore configuration in `.claude/settings.json`,
-not promises in `CLAUDE.md`.
+rules "are enforced by the client regardless of what Claude decides to do". Destructive commands
+and secret-file reads are therefore configuration in `.claude/settings.json`, not promises in
+`CLAUDE.md`.
+
+That configuration has one limit worth stating plainly, because it decides where the gate lives.
+Claude Code treats a hook it cannot start — a missing interpreter, a bad path — and a hook that
+reaches its timeout as a **non-blocking** error, and the tool call proceeds. A `PreToolUse` hook
+therefore fails open and cannot be the last line of defence. Git behaves the other way: any
+non-zero exit from `.githooks/pre-commit` refuses the commit. So the document gate runs in both
+places — in Claude Code for fast feedback, and in git as the check that actually holds, including
+when Python is absent, and including for commits nobody asked Claude to make.
 
 ## Requirements
 
 - Git.
-- Python 3.10 or later, for `tools/check-docs.py` and the hook scripts. Standard library only; no
-  packages to install.
+- Python 3.9 or later, for `tools/check-docs.py` and the hook scripts. Standard library only; no
+  packages to install. `.githooks/pre-commit` finds it as `python3`, `python`, or the Windows `py`
+  launcher, and probes the version rather than trusting the name — on Windows, `python.exe` on
+  `PATH` is often the Microsoft Store app-execution alias, which is not an interpreter. If none of
+  the three is a real Python 3.9+, the hook refuses the commit instead of skipping the check.
 - Claude Code recent enough to support `.claude/rules/` with `paths:` frontmatter and the
   `InstructionsLoaded` hook. Step 3 above is the check; if rules do not load, move their content
   into directory-scoped `CLAUDE.md` files beside the code they govern and record which mechanism

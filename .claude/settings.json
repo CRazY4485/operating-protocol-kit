@@ -57,7 +57,7 @@
               "${CLAUDE_PROJECT_DIR}",
               "--hook"
             ],
-            "timeout": 120,
+            "timeout": 60,
             "statusMessage": "Running the document gate before commit..."
           }
         ]

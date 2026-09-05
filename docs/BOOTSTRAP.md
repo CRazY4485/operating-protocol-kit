@@ -17,9 +17,9 @@ Nothing here invents project facts. Every value recorded comes from the owner or
 output; an unknown is asked, never assumed.
 
 1. **Git first, before anything else exists.** `git init`, `.gitignore` (build output, caches,
-   compiled artifacts, `logs/`, secrets file), `.gitattributes` (UTF-8, LF), `.editorconfig`, first
-   commit. Every later step is then reversible; a bootstrap that sets up the repository last has
-   done its riskiest work unprotected.
+   compiled artifacts, `logs/`, secrets file), `.gitattributes` (UTF-8, LF), `.editorconfig`,
+   `git config core.hooksPath .githooks`, first commit. Every later step is then reversible; a
+   bootstrap that sets up the repository last has done its riskiest work unprotected.
 2. **Establish the ground facts with the owner.** The specification document; which runtimes and
    languages the project uses; which operating systems it must run on and which the owner works
    from; the working language for conversation and the Memory Bank; deadlines; and any external
@@ -73,18 +73,21 @@ output; an unknown is asked, never assumed.
    rule-loading mechanism verified in step 3, and the pre-authorised zone the owner grants. A
    decision made before the log exists is a decision that will be forgotten. What earns a record is
    listed in `docs/decision-format.md`.
-10. **Install the enforced configuration.** `.claude/settings.json` ships with the document set:
-    denied destructive commands and secret-file reads, the `PreToolUse` hook that blocks a commit
-    whose document gate fails, and the `InstructionsLoaded` hook from step 3. Confirm it is in
-    place, extend the deny list with anything this project must never run, and demonstrate one deny
-    rule firing so the owner has seen the protection work rather than read about it. Anything a
-    tool can enforce belongs here rather than in my attention.
+10. **Install the enforced configuration, and prove the gate refuses.** Two layers ship with the
+    document set. `.claude/settings.json` holds the denied destructive commands and secret-file
+    reads, the `InstructionsLoaded` hook from step 3, and a `PreToolUse` run of the document gate;
+    Claude Code lets a hook it cannot start fail open, so this layer is a fast signal, not the
+    gate. `.githooks/pre-commit` is the gate, and git refuses the commit on any non-zero exit.
+    Confirm `core.hooksPath` is set, extend the deny list with anything this project must never
+    run, then demonstrate two refusals in front of the owner: a deny rule firing, and a commit
+    refused by the document gate. A protection the owner has not watched work does not count as
+    installed.
 
 **Exit condition.** Bootstrap is finished only when all of these are true, and I state each with
 its evidence: the verification command runs clean, writes its log, and the owner has run it
 themselves at least once; the rule files are confirmed loaded, with the log line to show it; every
-Tier 1 memory-bank file exists and the owner has confirmed its content; the kit version and the
-encodings are recorded; the first decisions are recorded; the enforced configuration is installed
-and one deny rule has been seen to fire; and the repository is committed with the `last-good` tag
-on that commit. Then the first real task goes through the *Task protocol*, and this file is never
-read again.
+Tier 1 memory-bank file exists and the owner has confirmed its content; the interpreter behind the
+gate, the kit version and the encodings are recorded in `techContext.md`; the first decisions are
+recorded; `core.hooksPath` is set and both a deny rule and a gate refusal have been seen to fire;
+and the repository is committed with the `last-good` tag on that commit. Then the first real task
+goes through the *Task protocol*, and this file is never read again.
