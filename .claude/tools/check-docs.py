@@ -54,7 +54,7 @@ from pathlib import Path
 WRAP_LIMIT = 100  # columns, for every governed document except CLAUDE.md
 
 BUDGETS: dict[str, dict[str, int | None]] = {
-    "CLAUDE.md": {"words": 4200, "lines": 200, "wrap": None},
+    "CLAUDE.md": {"words": 4400, "lines": 200, "wrap": None},
     "docs/ARCHITECTURAL_CONSTITUTION.md": {"words": 4600, "lines": None, "wrap": WRAP_LIMIT},
     "docs/BOOTSTRAP.md": {"words": 1500, "lines": None, "wrap": WRAP_LIMIT},
     "docs/decision-format.md": {"words": 900, "lines": None, "wrap": WRAP_LIMIT},

@@ -24,6 +24,7 @@ with it. Everything else is copied into the project.
 | `.claude/settings.json` | Enforced by the client, not read | Denied commands and paths, and the hooks |
 | `.claude/KIT_VERSION` | At bootstrap, and at session start | The version of the document set in force |
 | `.githooks/pre-commit` | Enforced by git on every commit | The document gate, as the layer that fails closed |
+| `.claude/hooks/session-start.py` | Every session start, `/clear` included | The state report a fresh session opens with |
 | `memory-bank/` | Tiered, per task | Project state — created at bootstrap, not shipped with the kit |
 
 `memory-bank/` is deliberately absent from the kit. Its absence is what tells the assistant the
@@ -43,9 +44,8 @@ writes the kit's version beside it as `<name>.kit-new` for you to merge:
 To do it by hand instead:
 
 1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `.githooks/`, `.gitignore`, `.gitattributes` and
-   `.editorconfig` into the repository root — or run `install.sh` / `install.ps1`, which copies
-   exactly this set and performs step 3 for you. `README.md` and `CHANGELOG.md`
-   describe the kit itself and stay with it; they are not copied. Do not copy `memory-bank/`
+   `.editorconfig` into the repository root. `README.md` and `CHANGELOG.md` describe the kit
+   itself and stay with it; they are not copied. Do not copy `memory-bank/`
    either — bootstrap creates it, and its absence is what marks a project as pre-implementation.
 2. Delete the language rule files the project does not use. A language in use with no rule file is
    a blocker, not a gap to fill later.
@@ -68,7 +68,7 @@ To do it by hand instead:
 6. Follow `docs/BOOTSTRAP.md` from step 1. It ends with a stated exit condition and is never read
    again afterwards.
 
-## The two ideas the rest follows from
+## The three ideas the rest follows from
 
 **Evidence outlives the report.** The owner is assumed not to read code, so a claim is worth
 nothing unless it points at something the owner can open unaided: a gate log, a build output, a
@@ -89,15 +89,24 @@ non-zero exit from `.githooks/pre-commit` refuses the commit. So the document ga
 places — in Claude Code for fast feedback, and in git as the check that actually holds, including
 when Python is absent, and including for commits nobody asked Claude to make.
 
+**Continuity is a file, or it is nothing.** This project's session boundary is `/clear`, which
+starts a new conversation. Anthropic's documentation lists what a *compaction* re-injects from
+disk — the project CLAUDE.md, unscoped rules, auto memory, the plan written in plan mode, recently
+read files — but a cleared session gets none of the conversation back. So the approved plan lives
+in `memory-bank/activeContext.md` rather than in the transcript, and a `SessionStart` hook puts the
+project's state in front of Claude before the first turn. Auto memory is turned off in
+`.claude/settings.json`: it would survive `/clear`, but it lives outside the repository and outside
+git, is machine-local, and is invisible to the owner, so it cannot hold a record the owner is meant
+to audit.
+
 ## Requirements
 
-- Git.
-- Python 3.9 or later, for `.claude/tools/check-docs.py` and the hook scripts. Standard library only; no
-  packages to install. `.githooks/pre-commit` finds it as `python3`, `python`, or the Windows `py`
+- Git 2.9 or later, for `core.hooksPath`.
+- Python 3.9 or later, for `.claude/tools/check-docs.py` and the hook scripts. Standard library
+  only; no packages to install. `.githooks/pre-commit` finds it as `python3`, `python`, or the Windows `py`
   launcher, and probes the version rather than trusting the name — on Windows, `python.exe` on
   `PATH` is often the Microsoft Store app-execution alias, which is not an interpreter. If none of
   the three is a real Python 3.9+, the hook refuses the commit instead of skipping the check.
-- Git 2.9 or later, for `core.hooksPath`.
 - Claude Code recent enough to support `.claude/rules/` with `paths:` frontmatter and the
   `InstructionsLoaded` hook. Step 3 above is the check; if rules do not load, move their content
   into directory-scoped `CLAUDE.md` files beside the code they govern and record which mechanism

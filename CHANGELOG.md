@@ -5,6 +5,47 @@ project may already be relying on, a **minor** bump adds a rule or a document, a
 clarifies wording without changing what is required. The version in effect on a project is
 recorded in its `memory-bank/techContext.md` at bootstrap.
 
+## 2.1.0 — 2026-09-05
+
+The project's session boundary is `/clear`, not `/compact`. The two are not equivalent, and the
+document set was written for the wrong one.
+
+### Added
+
+- `docs/templates/activeContext.md`: the Tier 1 file now has a template, and it carries the
+  approved plan — goal, files in scope, steps with state, owner check, undo. Every rule that refers
+  to "the approved plan" (scope lock, the review step, the owner-check step, a sub-agent's brief)
+  previously depended on an artefact that existed only in the conversation, so a cleared session
+  could not enforce any of them.
+- `.claude/hooks/session-start.py` and a `SessionStart` hook on `startup|clear|resume|compact`. It
+  reports the kit version against the recorded one, the Tier 1 files with word counts, the git
+  state including `core.hooksPath`, and the open plan, as `additionalContext`. It fails open like
+  any hook, so `CLAUDE.md` still owns the cascade.
+- `CLAUDE.md`, *Continuity across `/clear`*: what does and does not cross a cleared session, and
+  why every continuity mechanism here is a file.
+- `CLAUDE.md`, *Git and recovery*: `/rewind` is not the checkpoint. Claude Code's checkpointing
+  does not track files changed by bash commands and does not restore a sub-agent's edits, and
+  sub-agents are where this protocol puts code writing.
+- `docs/BOOTSTRAP.md` step 11: a cleared session must be seen to receive its state report before
+  bootstrap is complete.
+
+### Changed
+
+- `autoMemoryEnabled: false` in `.claude/settings.json`. Auto memory survives `/clear` and is
+  loaded into every session, but it lives outside the repository and outside git, is machine-local,
+  and is invisible to the owner. `CLAUDE.md`'s claim that `memory-bank/` is all that persists was
+  false while it was on; turning it off makes the claim true.
+- *Session hygiene* is written around `/clear` rather than compaction, and the rule that a session
+  never ends leaving the repository in a state the next one cannot resume from is restored. It had
+  been dropped in 1.0.0 while trimming to the word budget — a regression introduced by the audit
+  work itself.
+- The `CLAUDE.md` word budget rises from 4 200 to 4 400 to hold the continuity model. Roughly 130
+  words were trimmed first, and the raise is recorded here because the gate's own comment requires
+  it: a budget is raised only when the document genuinely needs the room, never to make an
+  over-budget file pass.
+- *Session start* is shorter: the hook now reports the mechanical checks, so the section states
+  what to do about them rather than how to gather them.
+
 ## 2.0.0 — 2026-09-05
 
 Breaking: the installed layout changed. A project installed from 1.x moves `tools/check-docs.py`

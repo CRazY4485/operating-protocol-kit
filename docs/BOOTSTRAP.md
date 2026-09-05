@@ -42,8 +42,8 @@ output; an unknown is asked, never assumed.
    with `tests/` mirroring the source structure from the first commit rather than added later.
 5. **Create the memory-bank files in the working language**, in this order because each inherits
    from the last: `projectbrief.md` distilled from the specification first, then
-   `productContext.md`, `systemPatterns.md`, `techContext.md`, and finally `activeContext.md`,
-   `progress.md`, an empty `backlog.md`, and — copied from `docs/templates/` and translated —
+   `productContext.md`, `systemPatterns.md`, `techContext.md`, then `progress.md` and an empty
+   `backlog.md`, and finally — copied from `docs/templates/` and translated — `activeContext.md`,
    `decisions/decisions.md` and `decisions/superseded.md`. Confirm each with the owner: everything
    downstream inherits errors made here, so accuracy beats speed. Record the value of
    `.claude/KIT_VERSION` in `techContext.md`, so a later session can see whether the project is
@@ -75,19 +75,25 @@ output; an unknown is asked, never assumed.
    listed in `docs/decision-format.md`.
 10. **Install the enforced configuration, and prove the gate refuses.** Two layers ship with the
     document set. `.claude/settings.json` holds the denied destructive commands and secret-file
-    reads, the `InstructionsLoaded` hook from step 3, and a `PreToolUse` run of the document gate;
-    Claude Code lets a hook it cannot start fail open, so this layer is a fast signal, not the
-    gate. `.githooks/pre-commit` is the gate, and git refuses the commit on any non-zero exit.
-    Confirm `core.hooksPath` is set, extend the deny list with anything this project must never
-    run, then demonstrate two refusals in front of the owner: a deny rule firing, and a commit
-    refused by the document gate. A protection the owner has not watched work does not count as
-    installed.
+    reads, `autoMemoryEnabled: false`, and three hooks: `InstructionsLoaded` from step 3, a
+    `PreToolUse` run of the document gate, and `SessionStart`, which reports the project's state
+    into a fresh session. Claude Code lets a hook it cannot start fail open, so this layer is a
+    fast signal, not the gate. `.githooks/pre-commit` is the gate, and git refuses the commit on
+    any non-zero exit. Confirm `core.hooksPath` is set, extend the deny list with anything this
+    project must never run, then demonstrate two refusals in front of the owner: a deny rule
+    firing, and a commit refused by the document gate. A protection the owner has not watched work
+    does not count as installed.
+11. **Prove the session survives `/clear`.** With a plan recorded in `activeContext.md`, clear the
+    session and confirm the state report names the kit version, the Tier 1 files, the git state and
+    the open plan. This is the project's continuity model, and an untested continuity model is an
+    assumption. See `CLAUDE.md`, *Continuity across `/clear`*.
 
 **Exit condition.** Bootstrap is finished only when all of these are true, and I state each with
 its evidence: the verification command runs clean, writes its log, and the owner has run it
 themselves at least once; the rule files are confirmed loaded, with the log line to show it; every
 Tier 1 memory-bank file exists and the owner has confirmed its content; the interpreter behind the
 gate, the kit version and the encodings are recorded in `techContext.md`; the first decisions are
-recorded; `core.hooksPath` is set and both a deny rule and a gate refusal have been seen to fire;
+recorded; `core.hooksPath` is set, both a deny rule and a gate refusal have been seen to fire, and
+a cleared session has been seen to receive its state report;
 and the repository is committed with the `last-good` tag on that commit. Then the first real task
 goes through the *Task protocol*, and this file is never read again.
