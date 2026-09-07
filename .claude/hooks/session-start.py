@@ -116,11 +116,20 @@ def plan_report(root: Path) -> list[str]:
 
 
 def main() -> int:
+    # Claude Code writes the event JSON as UTF-8, but `json.load(sys.stdin)`
+    # decodes with the locale encoding, which on Windows is the ANSI code page
+    # (cp1254 on a Turkish/Azerbaijani install, not UTF-8). A project path
+    # holding a non-ASCII character then arrives mojibaked, `root` points at a
+    # directory that does not exist, and the report claims the kit and the
+    # repository are both missing. Read the bytes and decode them explicitly.
     try:
-        payload = json.load(sys.stdin)
-    except (OSError, ValueError):
+        payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+    except (OSError, ValueError, AttributeError):
         payload = {}
-    root = Path(payload.get("cwd") or Path.cwd())
+    # argv wins over the payload: the other two hooks are handed
+    # ${CLAUDE_PROJECT_DIR} and are immune to the decoding above, and this one
+    # is now handed it too. The payload stays as the fallback.
+    root = Path(sys.argv[1] if len(sys.argv) > 1 else (payload.get("cwd") or Path.cwd()))
     started = payload.get("source", "unknown")
 
     lines = [

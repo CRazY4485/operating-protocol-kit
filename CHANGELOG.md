@@ -5,6 +5,27 @@ project may already be relying on, a **minor** bump adds a rule or a document, a
 clarifies wording without changing what is required. The version in effect on a project is
 recorded in its `memory-bank/techContext.md` at bootstrap.
 
+## 3.0.1 — 2026-09-07
+
+A patch bump: it changes nothing a project is required to do, and fixes a defect that made the
+`SessionStart` report untrue on any machine whose locale encoding is not UTF-8.
+
+### Fixed
+
+- **The hooks read their stdin payload as UTF-8 rather than as the locale encoding.** Claude Code
+  writes the event JSON as UTF-8, but `json.load(sys.stdin)` decodes with the platform's preferred
+  encoding, which on Windows is the ANSI code page — `cp1254` on a Turkish or Azerbaijani install.
+  A project path holding a non-ASCII character therefore arrived mojibaked. `session-start.py` took
+  its root from that path alone, so it resolved to a directory that does not exist and the report
+  claimed `.claude/KIT_VERSION is missing` and `git: not a repository` on a project where both were
+  present and correct. That is the worst failure this hook can have: a state report the session is
+  meant to trust, stating the opposite of the truth, with no error to signal it. Both hooks now
+  read the bytes and decode them explicitly.
+- **The `SessionStart` hook is handed `${CLAUDE_PROJECT_DIR}` like the other two.** It was the only
+  hook deriving the project root from the payload rather than from its arguments, which is why it
+  was the only one the decoding defect could disable outright. Arguments arrive already decoded, so
+  the root no longer depends on stdin at all; the payload remains the fallback.
+
 ## 3.0.0 — 2026-09-05
 
 An external audit checked every claim this kit makes about Claude Code against Anthropic's

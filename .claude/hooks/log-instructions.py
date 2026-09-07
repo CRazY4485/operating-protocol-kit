@@ -29,8 +29,11 @@ LOG_RELATIVE = Path("logs") / "instructions-loaded.log"
 def main() -> int:
     try:
         root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
-        payload = json.load(sys.stdin)
-    except (OSError, ValueError, IndexError):
+        # UTF-8 explicitly: the locale encoding would mangle a non-ASCII
+        # file_path into a log line naming a file that was never loaded. See
+        # the same read in session-start.py.
+        payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+    except (OSError, ValueError, IndexError, AttributeError):
         return 0
 
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
