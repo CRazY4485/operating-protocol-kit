@@ -116,8 +116,13 @@ Those rules match the command text of a tool call, so they have a documented edg
 the spellings it names, and `Bash` and `PowerShell` are separate prefixes needing separate rules.
 That is why `rm` and `git clean` are denied outright rather than flag by flag, why the force flags
 of `git push` and the `--hard` of `git reset` are matched wherever they stand in the command, and
-why every destructive git rule is written twice. `tests/test_settings.py` lists the spellings each
-rule must catch and the everyday commands it must not. It is also why they stop at the tool
+why every destructive git rule is written twice. Commands that discard uncommitted work but have
+everyday uses too — `git restore`, `git checkout -- <path>`, `git stash drop`, `git branch -D`
+and their kin — are `ask` rules instead, so Claude Code stops for the owner before each one. A
+path checked out without `--` (`git checkout src/app.py`) cannot be told from a branch switch by a
+pattern and is not covered, and PowerShell matches case-insensitively, so there `git branch -d`
+asks too. `tests/test_settings.py` lists the spellings each rule must catch and the everyday
+commands it must not. It is also why they stop at the tool
 boundary — a permission rule governs what Claude runs, not what a script Claude ran goes on to do.
 For enforcement below that line, Anthropic points at
 [sandboxing](https://code.claude.com/docs/en/sandboxing), which is an OS-level boundary

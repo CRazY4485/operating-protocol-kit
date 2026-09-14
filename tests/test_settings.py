@@ -21,14 +21,18 @@ from kit_testing import KIT, SETTINGS
 RULE = re.compile(r"^(Bash|PowerShell)\((.*)\)$")
 
 
-def deny_rules(tool: str) -> list[str]:
+def rules(kind: str, tool: str) -> list[str]:
     config = json.loads((KIT / SETTINGS).read_text(encoding="utf-8"))
     bodies = []
-    for rule in config["permissions"]["deny"]:
+    for rule in config["permissions"][kind]:
         match = RULE.match(rule)
         if match and match.group(1) == tool:
             bodies.append(match.group(2))
     return bodies
+
+
+def deny_rules(tool: str) -> list[str]:
+    return rules("deny", tool)
 
 
 def matches(body: str, command: str) -> bool:
@@ -95,10 +99,59 @@ def test_everyday_command_is_not_denied(command: str) -> None:
     assert not denies(command)
 
 
-def test_every_git_rule_has_a_powershell_twin() -> None:
+def asks(command: str) -> bool:
+    return any(matches(body, command) for body in rules("ask", "Bash"))
+
+
+# These discard uncommitted work for good, but have everyday uses too, so the
+# owner is asked each time rather than the command being refused outright.
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git checkout -- .",
+        "git checkout -- src/app.py",
+        "git checkout HEAD -- src/app.py",
+        "git checkout .",
+        "git checkout -f main",
+        "git restore src/app.py",
+        "git restore .",
+        "git switch -f main",
+        "git switch --discard-changes main",
+        "git stash drop",
+        "git stash drop stash@{1}",
+        "git stash clear",
+        "git branch -D feature",
+    ],
+)
+def test_command_that_discards_uncommitted_work_asks_first(command: str) -> None:
+    assert asks(command)
+    assert not denies(command)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git checkout main",
+        "git checkout -b feature",
+        "git switch main",
+        "git switch -c feature",
+        "git stash",
+        "git stash pop",
+        "git stash list",
+        "git branch feature",
+        "git branch -d merged",
+    ],
+)
+def test_everyday_git_command_does_not_ask(command: str) -> None:
+    assert not asks(command)
+    assert not denies(command)
+
+
+@pytest.mark.parametrize("kind", ["deny", "ask"])
+def test_every_git_rule_has_a_powershell_twin(kind: str) -> None:
     # Bash and PowerShell are separate permission prefixes, so a git rule
     # written for one tool leaves the same command open through the other.
-    bash = {body for body in deny_rules("Bash") if body.startswith("git ")}
-    powershell = {body for body in deny_rules("PowerShell") if body.startswith("git ")}
+    bash = {body for body in rules(kind, "Bash") if body.startswith("git ")}
+    powershell = {body for body in rules(kind, "PowerShell") if body.startswith("git ")}
 
     assert bash == powershell

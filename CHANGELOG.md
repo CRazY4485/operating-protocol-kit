@@ -45,6 +45,12 @@ the voice of deliverables, which it never did.
   `git push *--force*`, `git push -f*`, `git push * -f*` and `git push *+*`, and
   `git reset --hard *` is `git reset *--hard*`. Every git rule keeps its `PowerShell` twin.
 - **`find … -delete`, `truncate` and `shred` are denied** for `Bash`, beside `rm`.
+- **Commands that discard uncommitted work ask first.** `git restore`, `git checkout -- <path>`,
+  `git checkout .`, `git checkout -f`, `git switch -f` and `--discard-changes`, `git stash drop`
+  and `clear`, and `git branch -D` were neither denied nor asked about, though each can destroy
+  work git never saw. They have everyday uses too, so they are `ask` rules rather than `deny`:
+  Claude Code stops for the owner before each. A path checked out without `--` cannot be told
+  from a branch switch by a pattern and stays uncovered.
 - **The first-person check is removed, because it never ran.** It skipped every rule document and
   every path under `.claude/rules/`, and those were the only documents the gate loaded, so it
   returned before its first comparison on every run while `.claude/rules/markdown.md` said the
@@ -185,9 +191,9 @@ New files, copied as they are: `.claude/tools/kit_config.py`, which `check-docs.
 
 Merge:
 
-- `.claude/settings.json` — take the kit's `permissions.deny` list whole, and keep the project's
-  own hooks. Keep the hook `command` the installer wrote into the `.kit-new`, which is the
-  interpreter it proved on this machine.
+- `.claude/settings.json` — take the kit's `permissions.deny` and `permissions.ask` lists whole,
+  and keep the project's own hooks. Keep the hook `command` the installer wrote into the
+  `.kit-new`, which is the interpreter it proved on this machine.
 - `CLAUDE.md` — *Quality gates*: the one gate command is `run-gates.py`, its log comes with a
   hash, what the document gate checks is listed at the top of `check-docs.py`, and a language
   without a rule file points at `docs/templates/language-rules.md`. *Memory Bank*: Tier 1 budgets
