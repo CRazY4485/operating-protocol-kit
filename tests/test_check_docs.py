@@ -373,6 +373,15 @@ def test_the_shipped_tier1_templates_leave_room_under_their_budgets(kit_tree: Pa
 # --- unmerged kit files ----------------------------------------------------------------
 
 
+def test_warns_while_kit_upgrade_steps_are_pending(kit_tree: Path) -> None:
+    write(kit_tree, ".claude/KIT_UPGRADE.md", "# Kit upgrade 3.0.1 -> 4.0.0\n")
+
+    run = run_gate(kit_tree)
+
+    assert run.code == 0, run.output
+    assert "WARN  .claude/KIT_UPGRADE.md: kit upgrade steps are pending" in run.output
+
+
 def test_warns_on_an_unmerged_kit_file(kit_tree: Path) -> None:
     write(kit_tree, ".claude/settings.json.kit-new", "{}\n")
 

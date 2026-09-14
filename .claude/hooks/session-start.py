@@ -69,6 +69,15 @@ def read(path: Path) -> str:
 
 
 def version_report(root: Path) -> str:
+    report = kit_version_report(root)
+    # An installer upgrading the project leaves the steps each newer release
+    # asks for here, because the kit's CHANGELOG.md is not in the project.
+    if (root / ".claude" / "KIT_UPGRADE.md").exists():
+        report += " - UPGRADE PENDING - .claude/KIT_UPGRADE.md lists the steps still to do"
+    return report
+
+
+def kit_version_report(root: Path) -> str:
     shipped = read(root / ".claude" / "KIT_VERSION").strip()
     if not shipped:
         return "kit version: .claude/KIT_VERSION is missing"

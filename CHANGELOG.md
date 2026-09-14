@@ -7,7 +7,9 @@ recorded in its `memory-bank/techContext.md` at bootstrap.
 
 Each release from 4.0.0 on ends with an *Upgrading* section: the installed files it changes, and
 anything a project must do beyond merging them. Re-running an installer on a project writes each
-changed file beside the project's copy as `<name>.kit-new`; that section says what to merge.
+changed file beside the project's copy as `<name>.kit-new`, and copies the *Upgrading* section of
+every release newer than the project's into `.claude/KIT_UPGRADE.md`, since this file stays with
+the kit.
 
 ## 4.0.0 — 2026-09-14
 
@@ -119,6 +121,15 @@ the voice of deliverables, which it never did.
   exist; a Tier 1 template must fit the budget of the file bootstrap makes of it; and the
   `activeContext.md` template must keep the `<!-- plan -->` anchor, with a test holding the gate's
   pattern for it equal to the `SessionStart` hook's.
+- **Upgrade steps reach the project.** A project upgrading saw `KIT_VERSION MISMATCH` in its
+  state report and had nothing inside it that said what to do: the steps lived only in this file,
+  which stays with the kit. Run on a project with an older kit, the installers now copy the
+  *Upgrading* section of every newer release, oldest first, into `.claude/KIT_UPGRADE.md`; a
+  release before this convention is named with a pointer here instead. The document gate warns and
+  the `SessionStart` report says `UPGRADE PENDING` until the file is deleted, and notes already
+  pending are never overwritten. The work both installers share — this, and naming the hook
+  interpreter — now lives once, in the kit-only `install_support.py`, rather than as the same
+  Python embedded in two shells. A project upgrading from 3.x to 4.0.0 gets its notes this way.
 - **Unmerged kit files are reported.** A `*.kit-new` an installer left beside a file is a warning
   naming the file to merge it into. It was an untracked file that `git add -A` would commit.
 - **`.github/workflows/document-gate.yml` runs the document gate on every push and pull request.**

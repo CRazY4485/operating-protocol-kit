@@ -104,8 +104,54 @@ def test_fresh_install_names_the_proven_interpreter(installer: str, project: Pat
     assert commands == {proven_interpreter(result)}
 
 
-KIT_ONLY = ["README.md", "CHANGELOG.md", "install.sh", "install.ps1", "tests",
-            ".github/workflows/kit-tests.yml"]
+KIT_ONLY = ["README.md", "CHANGELOG.md", "install.sh", "install.ps1", "install_support.py",
+            "tests", ".github/workflows/kit-tests.yml"]
+UPGRADE_NOTES = Path(".claude") / "KIT_UPGRADE.md"
+
+
+def kit_version() -> str:
+    return (KIT / ".claude" / "KIT_VERSION").read_text(encoding="utf-8").strip()
+
+
+def commit_old_kit_version(project: Path, version: str = "3.0.1") -> None:
+    target = project / ".claude" / "KIT_VERSION"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(f"{version}\n".encode("utf-8"))
+    git(project, "add", "-A")
+    git(project, "commit", "-q", "-m", "an older kit")
+
+
+@pytest.mark.parametrize("installer", INSTALLERS)
+def test_writes_the_upgrade_notes_for_an_older_project(installer: str, project: Path) -> None:
+    commit_old_kit_version(project)
+
+    result = run_installer(installer, project)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    notes = (project / UPGRADE_NOTES).read_text(encoding="utf-8")
+    assert notes.startswith(f"# Kit upgrade 3.0.1 -> {kit_version()}\n")
+    assert "Replace outright" in notes
+
+
+@pytest.mark.parametrize("installer", INSTALLERS)
+def test_writes_no_upgrade_notes_on_a_first_install(installer: str, project: Path) -> None:
+    result = run_installer(installer, project)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not (project / UPGRADE_NOTES).exists()
+
+
+@pytest.mark.parametrize("installer", INSTALLERS)
+def test_keeps_upgrade_notes_already_pending(installer: str, project: Path) -> None:
+    (project / ".claude").mkdir()
+    (project / UPGRADE_NOTES).write_bytes(b"# Steps still to do\n")
+    commit_old_kit_version(project)
+
+    result = run_installer(installer, project)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (project / UPGRADE_NOTES).read_bytes() == b"# Steps still to do\n"
+    assert (project / ".claude" / "KIT_UPGRADE.md.kit-new").is_file()
 
 
 @pytest.mark.parametrize("installer", INSTALLERS)

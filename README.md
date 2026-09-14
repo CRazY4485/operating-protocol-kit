@@ -6,9 +6,10 @@ repository unchanged and configured per project through `memory-bank/techContext
 
 Version: see `.claude/KIT_VERSION`. Changes: see `CHANGELOG.md`.
 
-`README.md`, `CHANGELOG.md`, `install.sh` and `install.ps1` describe the kit itself and stay
-with it, as do its test suite, `tests/`, and the workflow that runs it,
-`.github/workflows/kit-tests.yml`. Everything else is copied into the project.
+`README.md`, `CHANGELOG.md`, `install.sh`, `install.ps1` and their shared helper
+`install_support.py` describe or install the kit itself and stay with it, as do its test suite,
+`tests/`, and the workflow that runs it, `.github/workflows/kit-tests.yml`. Everything else is
+copied into the project.
 
 ## What each file is, and when it is read
 
@@ -40,7 +41,10 @@ project is still pre-implementation; see `CLAUDE.md`, *Session start*.
 The script does the mechanical steps below — copying, the hook interpreter, `core.hooksPath` and
 the first gate run. It refuses to touch a dirty working tree so the install is undoable with
 `git checkout . && git clean -fd`, and never overwrites a file you already have — it writes the
-kit's version beside it as `<name>.kit-new` for you to merge:
+kit's version beside it as `<name>.kit-new` for you to merge. Run on a project that has an older
+kit, it also writes `.claude/KIT_UPGRADE.md`: the *Upgrading* section of every newer release,
+since `CHANGELOG.md` stays with the kit. The document gate and the `SessionStart` report both flag
+that file until it is deleted:
 
 ```text
 ./install.sh /path/to/project

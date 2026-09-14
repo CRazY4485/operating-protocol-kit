@@ -112,6 +112,16 @@ def test_names_a_budgets_file_it_cannot_use(tmp_path: Path) -> None:
     assert "memory-bank/budgets.json: not used" in report
 
 
+def test_reports_pending_kit_upgrade_steps(tmp_path: Path) -> None:
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "KIT_VERSION").write_bytes(b"4.0.0\n")
+    (tmp_path / ".claude" / "KIT_UPGRADE.md").write_bytes(b"# Kit upgrade 3.0.1 -> 4.0.0\n")
+
+    report = state_report(tmp_path)
+
+    assert "UPGRADE PENDING - .claude/KIT_UPGRADE.md" in report
+
+
 def test_reads_the_plan_from_a_file_made_from_the_shipped_template(tmp_path: Path) -> None:
     bank = tmp_path / "memory-bank"
     bank.mkdir()

@@ -32,7 +32,8 @@ Checks performed:
  12. Gate list          - .claude/gates.json, if present, is one run-gates.py can
      use, so a broken list is refused at commit rather than found at the next run.
  13. Unmerged kit files  - a *.kit-new an installer left beside a file of the
-     same name (a warning).
+     same name, and a .claude/KIT_UPGRADE.md whose steps are still to do
+     (warnings).
 
 Voice is checked only in memory-bank/, and only for the phrases the project
 lists in its working language: a list the kit fixed would cover one language.
@@ -172,8 +173,10 @@ PLACEHOLDER = re.compile(r"[<>*]|NNNN")
 # root is. Tier 1 completeness under memory-bank/ is check_memory_bank's job.
 CONDITIONAL_ROOTS = ("memory-bank", "logs")
 # Files the project creates rather than the kit ships, so a reference to one is
-# valid before it exists. BOOTSTRAP.md step 6 creates the gate list.
-PROJECT_FILES = {GATES_FILE}
+# valid before it exists: BOOTSTRAP.md step 6 creates the gate list, and an
+# installer upgrading a project writes the upgrade notes.
+UPGRADE_NOTES = ".claude/KIT_UPGRADE.md"
+PROJECT_FILES = {GATES_FILE, UPGRADE_NOTES}
 
 # Directories kept out of the "did you mean" corpus below. memory-bank/ is the
 # one that matters: the house style names its files by shorthand, so
@@ -455,6 +458,11 @@ def check_gate_list(root: Path) -> None:
         error(GATES_FILE, 0, problem)
 
 
+def check_upgrade_pending(root: Path) -> None:
+    if (root / UPGRADE_NOTES).exists():
+        warn(UPGRADE_NOTES, 0, "kit upgrade steps are pending; do them, then delete this file")
+
+
 def check_unmerged(corpus: list[str]) -> None:
     """An installer never overwrites a file; it leaves the kit's version beside it."""
     for relative in corpus:
@@ -654,6 +662,7 @@ def main() -> int:
     check_version(root)
     check_settings(root)
     check_gate_list(root)
+    check_upgrade_pending(root)
     check_unmerged(corpus)
 
     # On exit 2 Claude Code gives Claude the hook's stderr as the reason for the

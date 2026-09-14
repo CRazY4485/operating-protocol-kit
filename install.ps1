@@ -9,8 +9,8 @@
          the pre-commit hook, and the document gate silently stops failing closed
          while still looking installed. This one command is the main reason this
          script exists.
-      2. Exactly the right files are copied. README.md, CHANGELOG.md and the two
-         install scripts describe the kit itself and stay with it.
+      2. Exactly the right files are copied. README.md, CHANGELOG.md, the two
+         install scripts and install_support.py stay with the kit.
       3. Nothing existing is destroyed. A file already present in the target is
          left untouched and the kit's version is written beside it as
          '<name>.kit-new', for you to merge. .gitignore is appended to, never
@@ -99,8 +99,8 @@ function Copy-One {
 # The copy set is whatever git tracks in the kit, minus the files that describe
 # the kit itself. Deriving it from git means .gitignore is the single source of
 # truth: build output, caches and logs can never be copied into a project.
-$kitOnly = @("README.md", "CHANGELOG.md", "install.sh", "install.ps1", "LICENSE", ".gitignore",
-    ".github/workflows/kit-tests.yml")
+$kitOnly = @("README.md", "CHANGELOG.md", "install.sh", "install.ps1", "install_support.py",
+    "LICENSE", ".gitignore", ".github/workflows/kit-tests.yml")
 foreach ($tracked in (git -C $kit ls-files)) {
     if ($kitOnly -contains $tracked) { continue }
     if ($tracked -like "tests/*") { continue }  # the kit's own test suite
@@ -174,35 +174,7 @@ Write-Host "Gate interpreter: $interpreter ($version)"
 # alias rather than an interpreter. Claude Code treats a hook it cannot start as
 # a NON-BLOCKING error and proceeds, so a wrong name here disables the hooks
 # silently. Write the interpreter this machine just proved instead of guessing.
-$env:KIT_INTERPRETER = $interpreter
-$patchHooks = @'
-import json, os, sys
-
-interpreter = os.environ["KIT_INTERPRETER"]
-for path in sys.argv[1:]:
-    try:
-        with open(path, encoding="utf-8") as handle:
-            config = json.load(handle)
-    except (OSError, ValueError):
-        continue  # absent, or not ours to rewrite
-    changed = 0
-    for groups in config.get("hooks", {}).values():
-        for group in groups:
-            for hook in group.get("hooks", []):
-                if hook.get("args") and hook.get("command") != interpreter:
-                    hook["command"] = interpreter
-                    changed += 1
-    if not changed:
-        continue
-    try:
-        with open(path, "w", encoding="utf-8", newline="\n") as handle:
-            json.dump(config, handle, indent=2, ensure_ascii=False)
-            handle.write("\n")
-    except OSError:
-        print(f"WARNING: could not set the hook interpreter in {path}")
-        continue
-    print(f"set the hook interpreter to {interpreter} in {os.path.basename(path)} ({changed} hooks)")
-'@
+$support = Join-Path $kit "install_support.py"
 
 # Only into a file this run wrote: the settings.json it copied into a project
 # that had none, or the .kit-new beside the project's own. A settings.json the
@@ -217,12 +189,16 @@ elseif (@($report | Where-Object { $_ -like "kept .claude\settings.json (*" }).C
 }
 
 if ($null -ne $settings) {
-    $patchHooks | & $interpreter - $settings
+    & $interpreter $support set-hook-interpreter $interpreter $settings
     if ($interpreter -ne "python3") {
         Write-Host "NOTE: the hooks name '$interpreter', which may not exist on another operating system." -ForegroundColor Yellow
         Write-Host "Where it does not, the hooks fail open there; the document gate warns about it."
     }
 }
+
+# A project on an older kit gets the steps each newer release asks of it, in a
+# file it reads, since the kit's CHANGELOG.md is not copied into the project.
+& $interpreter $support write-upgrade-notes $kit $Target
 
 Write-Host ""
 Write-Host "Running the document gate once, so the install is proven rather than assumed:"
