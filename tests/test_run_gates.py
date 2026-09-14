@@ -168,6 +168,10 @@ def test_after_bootstrap_a_missing_gates_file_fails(kit_tree: Path) -> None:
 
     assert run.code == 1
     assert "MISSING" in run.text
+    # BOOTSTRAP.md is read once and never again, so the way out must be named
+    # somewhere a bootstrapped project still reads.
+    assert "docs/templates/gates.json" in run.text
+    assert "BOOTSTRAP" not in run.text
 
 
 def test_an_empty_gate_list_is_a_declared_choice(kit_tree: Path) -> None:

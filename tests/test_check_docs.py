@@ -15,6 +15,7 @@ import pytest
 
 from kit_testing import (
     INDEX,
+    KIT,
     SETTINGS,
     bootstrap,
     filler,
@@ -324,6 +325,13 @@ def test_requires_the_plan_anchor_in_the_active_context_template(kit_tree: Path)
     run = run_gate(kit_tree)
 
     assert f"ERROR {PLAN_TEMPLATE}: no `<!-- plan -->` anchor" in run.output
+
+
+def test_the_template_keeps_commentary_out_of_the_plan_block() -> None:
+    # The hook hands everything below the anchor to every fresh session verbatim.
+    text = (KIT / PLAN_TEMPLATE).read_text(encoding="utf-8")
+
+    assert "nothing but the plan goes there" in text
 
 
 def test_gate_and_session_start_hook_read_the_same_plan_anchor() -> None:

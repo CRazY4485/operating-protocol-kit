@@ -10,7 +10,8 @@ What was accepted, and the gate log that proves it. One or two lines.
 
 ## Approved plan
 <!-- Keep the anchor below when this heading is translated: the SessionStart hook finds the plan by
-the anchor, not by the heading, and reads everything from it to the next heading verbatim. -->
+the anchor, not by the heading, and reads everything from it to the next heading verbatim, so
+nothing but the plan goes there. -->
 <!-- plan -->
 
 - **Goal:** one sentence — what is true when this is finished.

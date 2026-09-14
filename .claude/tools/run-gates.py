@@ -138,8 +138,10 @@ def run_all(root: Path, out: Tee) -> list[tuple[str, str]]:
         return results + [(GATES_FILE, "UNREADABLE")]
     if gates is None:
         if (root / "memory-bank").exists():
+            # Not a pointer to BOOTSTRAP.md: a bootstrapped project never reads it again.
             out.line(f"!! {GATES_FILE} is missing while memory-bank/ exists: a runtime with no "
-                     "recorded gate is a blocker (BOOTSTRAP.md step 6)")
+                     "recorded gate is a blocker; create it from docs/templates/gates.json "
+                     "(CLAUDE.md, Quality gates)")
             return results + [(GATES_FILE, "MISSING")]
         out.line(f"-- {GATES_FILE} is absent before bootstrap: the document gate is the only gate")
         return results

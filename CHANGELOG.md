@@ -59,9 +59,10 @@ the voice of deliverables, which it never did.
   would have been a broken link. A link that leaves the repository is now an error of its own.
 - **`docs/templates/activeContext.md` fits the budget of the file it becomes.** At 433 words it
   was over the 400-word Tier 1 budget of `memory-bank/activeContext.md`, so every project started
-  over budget the moment step 5 of `BOOTSTRAP.md` copied it. It is 231 words now: the rationale it
-  repeated from `CLAUDE.md` is referenced instead, and the instruction to keep the plan anchor
-  through translation sits beside the anchor.
+  over budget the moment step 5 of `BOOTSTRAP.md` copied it. It is 238 words now: the rationale it
+  repeated from `CLAUDE.md` is referenced instead, and the two instructions `CLAUDE.md` does not
+  carry — keep the plan anchor through translation, and put nothing but the plan beneath it —
+  sit beside the anchor.
 - **A reference in `docs/templates/superseded.md` resolved to nothing.** It named the
   "Alternatives rejected" section, a heading that exists only inside the example record in a
   code block; it now points at *Structure of a record*. The gate found it the first time it read
