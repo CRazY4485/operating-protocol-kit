@@ -214,8 +214,8 @@ New files, copied as they are: `.claude/tools/kit_config.py`, which `check-docs.
 Merge:
 
 - `.claude/settings.json` — take the kit's `permissions.deny` and `permissions.ask` lists and its
-  `PreToolUse` handlers whole, and keep the project's own hooks. Keep the hook `command` the installer wrote into the
-  `.kit-new`, which is the interpreter it proved on this machine.
+  `PreToolUse` handlers whole, and keep the project's own hooks. Keep the hook `command` the
+  installer wrote into the `.kit-new`, which is the interpreter it proved on this machine.
 - `CLAUDE.md` — *Quality gates*: the one gate command is `run-gates.py`, its log comes with a
   hash, what the document gate checks is listed at the top of `check-docs.py`, and a language
   without a rule file points at `docs/templates/language-rules.md`. *Memory Bank*: Tier 1 budgets
