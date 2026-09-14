@@ -9,9 +9,15 @@ Each release from 4.0.0 on ends with an *Upgrading* section: the installed files
 anything a project must do beyond merging them. Re-running an installer on a project writes each
 changed file beside the project's copy as `<name>.kit-new`; that section says what to merge.
 
-## Unreleased
+## 4.0.0 — 2026-09-14
 
-Fixes from the enforcement audit in issue #3, together with four defects found while checking it.
+Fixes from the enforcement audit in issue #3, and the defects found while checking it. It is a
+major bump because four changes alter what a project may already rely on: `git clean` is denied
+outright and force flags are denied in any position; the one gate command is now
+`.claude/tools/run-gates.py`, reading the project's `.claude/gates.json`, and a bootstrapped
+project without that file fails the gate run; Tier 1 budgets are tuned in
+`memory-bank/budgets.json` rather than `techContext.md`; and the gate no longer claims to check
+the voice of deliverables, which it never did.
 
 ### Fixed
 
