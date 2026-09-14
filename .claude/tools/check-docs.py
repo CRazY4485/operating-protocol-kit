@@ -16,6 +16,8 @@ Checks performed:
      decisions/NNNN-*.md file, and every such file appears in the index.
   6. Authored voice      - no first-person commentary in project deliverables.
   7. Kit version         - .claude/KIT_VERSION exists and is a semantic version.
+  8. Client settings     - .claude/settings.json parses, and the interpreter its
+     Python hooks name starts on this machine (a warning when it does not).
 
 Usage:
     python .claude/tools/check-docs.py            # from the repository root
@@ -32,8 +34,10 @@ printed so they are not invisible.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -137,6 +141,12 @@ CONDITIONAL_ROOTS = ("memory-bank", "logs")
 # and only after an install had already gone green.
 CORPUS_EXCLUDED = {".git", "memory-bank", "logs", "__pycache__", "node_modules"}
 DECISION_FILE = re.compile(r"^(\d{4})-[a-z0-9-]+\.md$")
+
+SETTINGS = ".claude/settings.json"
+# Run with `-c`, so the answer is the interpreter's own rather than its name's:
+# a Microsoft Store alias for python3 exists on PATH and still fails this.
+PYTHON_PROBE = "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)"
+PROBE_TIMEOUT_SECONDS = 15
 
 
 @dataclass
@@ -365,6 +375,65 @@ def check_version(root: Path) -> None:
         error(".claude/KIT_VERSION", 0, f"{value!r} is not a semantic version such as 1.0.0")
 
 
+def python_hook_commands(config: dict) -> set[str]:
+    """The `command` of every hook that runs a Python script, in exec form.
+
+    Raises AttributeError or TypeError when `hooks` is not the documented
+    mapping of event to matcher groups; the caller reports that.
+    """
+    commands: set[str] = set()
+    for groups in config.get("hooks", {}).values():
+        for group in groups:
+            for hook in group.get("hooks", []):
+                arguments = hook.get("args") or []
+                command = hook.get("command")
+                if isinstance(command, str) and arguments and str(arguments[0]).endswith(".py"):
+                    commands.add(command)
+    return commands
+
+
+def starts_python(command: str) -> bool:
+    try:
+        result = subprocess.run(
+            [command, "-c", PYTHON_PROBE],
+            capture_output=True,
+            timeout=PROBE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
+def check_settings(root: Path) -> None:
+    """The client configuration parses, and its hooks can start on this machine.
+
+    Both failures are silent in Claude Code. A settings file it cannot parse is
+    ignored, which drops every deny rule and every hook at once; a hook it
+    cannot start is a non-blocking error, and the call proceeds. The first is
+    an error. The second is a warning, because the file is shared through git
+    and a name that is right on one operating system can be absent on another.
+    """
+    path = root / SETTINGS
+    if not path.exists():
+        return
+    try:
+        config = json.loads(path.read_text(encoding="utf-8"))
+        commands = python_hook_commands(config)
+    except (UnicodeDecodeError, ValueError) as err:
+        error(SETTINGS, 0, f"not valid JSON, so Claude Code ignores every rule and hook in it: {err}")
+        return
+    except (AttributeError, TypeError):
+        error(SETTINGS, 0, "`hooks` is not in the shape Claude Code reads, so no hook in it runs")
+        return
+    for command in sorted(commands):
+        if not starts_python(command):
+            warn(SETTINGS, 0,
+                 f"hook interpreter `{command}` does not start Python 3.9+ on this machine, "
+                 "so Claude Code cannot run the hooks here and lets every call through; "
+                 "see README.md, Requirements")
+
+
 # --------------------------------------------------------------------------
 
 
@@ -412,6 +481,7 @@ def main() -> int:
     check_memory_bank(root)
     check_decisions(root)
     check_version(root)
+    check_settings(root)
 
     errors = [f for f in findings if f.level == "ERROR"]
     warnings = [f for f in findings if f.level == "WARN"]

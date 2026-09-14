@@ -5,6 +5,36 @@ project may already be relying on, a **minor** bump adds a rule or a document, a
 clarifies wording without changing what is required. The version in effect on a project is
 recorded in its `memory-bank/techContext.md` at bootstrap.
 
+## Unreleased
+
+Fixes from the enforcement audit in issue #3, together with four defects found while checking it.
+
+### Fixed
+
+- **The installers no longer rewrite a project's own hooks.** Both installers set the hook
+  interpreter by rewriting `command` in every hook that had `args`, and they did it in the
+  project's existing `.claude/settings.json` as well as in the `.kit-new` beside it. A project
+  hook such as `node format.js` became `python3 format.js`, which Claude Code cannot run and so
+  skips without a word. That contradicted the installers' own promise that nothing existing is
+  destroyed. They now write the interpreter only into a file the same run wrote: a
+  `settings.json` copied into a project that had none, or the `.kit-new`.
+- **Both installers try `python3` first.** `install.ps1` tried `py` first, so a Windows install
+  wrote `py` into a settings file that is committed and shared, and a teammate on macOS or Linux
+  then had no working hooks. `python3` is the only candidate name that exists on all three
+  systems. Both installers now probe `python3`, `python`, `py` in the order `.githooks/pre-commit`
+  always has, and print a note whenever they write a name other than `python3`.
+
+### Added
+
+- **The document gate checks `.claude/settings.json`.** A file that is not valid JSON is an
+  error: Claude Code ignores it, which drops every deny rule and hook at once. An interpreter
+  named by the Python hooks that does not start Python 3.9+ on the machine the gate runs on is a
+  warning — a warning rather than an error, because the file is shared and a name that is right
+  on one operating system can be missing on another. The gate runs in `.githooks/pre-commit`, so
+  the mismatch shows up on the first commit made on such a machine.
+- **Tests for the installers and the gate**, under `tests/`, run with `python -m pytest`. They
+  are part of the kit's own repository and are not copied into a project.
+
 ## 3.0.1 — 2026-09-07
 
 A patch bump: it changes nothing a project is required to do, and fixes a defect that made the

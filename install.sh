@@ -82,6 +82,7 @@ copy_one() {
 git -C "$KIT" ls-files | while IFS= read -r tracked; do
     case "$tracked" in
         README.md|CHANGELOG.md|install.sh|install.ps1|LICENSE) continue ;;
+        tests/*) continue ;;  # the kit's own test suite
         .gitignore) continue ;;  # merged below, never replaced
     esac
     copy_one "$tracked"
@@ -145,8 +146,20 @@ printf 'Gate interpreter: %s (%s)\n' "$interpreter" "$("$interpreter" --version 
 # alias rather than an interpreter. Claude Code treats a hook it cannot start as
 # a NON-BLOCKING error and proceeds, so a wrong name here disables the hooks
 # silently. Write the interpreter this machine just proved instead of guessing.
-KIT_INTERPRETER="$interpreter" "$interpreter" - \
-    "$TARGET/.claude/settings.json" "$TARGET/.claude/settings.json.kit-new" <<'PY'
+#
+# Only into a file this run wrote: the settings.json it copied into a project
+# that had none, or the .kit-new beside the project's own. A settings.json the
+# project already had is the project's file - it can hold hooks of its own,
+# which a rewrite would point at Python - and it stays byte-for-byte as it was.
+settings=""
+if grep -qxF 'copied .claude/settings.json' "$REPORT"; then
+    settings="$TARGET/.claude/settings.json"
+elif grep -qF 'kept .claude/settings.json (' "$REPORT"; then
+    settings="$TARGET/.claude/settings.json.kit-new"
+fi
+
+if [ -n "$settings" ]; then
+KIT_INTERPRETER="$interpreter" "$interpreter" - "$settings" <<'PY'
 import json, os, sys
 
 interpreter = os.environ["KIT_INTERPRETER"]
@@ -174,6 +187,14 @@ for path in sys.argv[1:]:
         continue
     print(f"set the hook interpreter to {interpreter} in {os.path.basename(path)} ({changed} hooks)")
 PY
+    # .claude/settings.json is committed and shared. `python3` is the one name
+    # that also exists on macOS and Linux; any other is this machine's alone.
+    if [ "$interpreter" != python3 ]; then
+        printf 'NOTE: the hooks name `%s`, which may not exist on another operating system.\n' "$interpreter"
+        printf 'Where it does not, the hooks fail open there; the document gate warns about it.\n'
+    fi
+fi
+
 printf 'Running the document gate once, so the install is proven rather than assumed:\n\n'
 "$interpreter" "$TARGET/.claude/tools/check-docs.py" --root "$TARGET" || {
     printf '\nThe gate did not pass. Fix the findings above before starting work.\n'

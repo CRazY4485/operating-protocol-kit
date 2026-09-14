@@ -32,9 +32,10 @@ project is still pre-implementation; see `CLAUDE.md`, *Session start*.
 
 ## Installing it in a project
 
-The script does all six steps below, refuses to touch a dirty working tree so the install is
-undoable with `git checkout . && git clean -fd`, and never overwrites a file you already have — it
-writes the kit's version beside it as `<name>.kit-new` for you to merge:
+The script does the mechanical steps below — copying, the hook interpreter, `core.hooksPath` and
+the first gate run. It refuses to touch a dirty working tree so the install is undoable with
+`git checkout . && git clean -fd`, and never overwrites a file you already have — it writes the
+kit's version beside it as `<name>.kit-new` for you to merge:
 
 ```text
 ./install.sh /path/to/project
@@ -63,10 +64,14 @@ To do it by hand instead:
    ```text
    git config core.hooksPath .githooks
    ```
-4. Start a session and run `/context`. The rule files must appear under **Memory files**. The
+4. Name a real interpreter in the three hooks of `.claude/settings.json`. They ship naming
+   `python3`, which a stock Windows install does not have. Where `python3 --version` fails, set
+   each hook's `command` to the interpreter that works — `py` on a stock Windows install. The
+   installers do this themselves, and only in a file they wrote.
+5. Start a session and run `/context`. The rule files must appear under **Memory files**. The
    `InstructionsLoaded` hook also writes every load to `logs/instructions-loaded.log`, so the
    answer survives the session.
-5. Run the document gate. It must pass before any project work begins:
+6. Run the document gate. It must pass before any project work begins:
 
    ```text
    python .claude/tools/check-docs.py
@@ -79,9 +84,9 @@ To do it by hand instead:
    Tier 1 files are now required; a missing or empty one is an error, and an empty decision index is
    a warning until step 9 of `BOOTSTRAP.md` fills it. **Post-bootstrap:** every Tier 1 file is
    present and within budget, and the decision index matches the records on disk. Expect the gate to
-   start reporting more, not less, once step 6 begins.
+   start reporting more, not less, once bootstrap begins.
 
-6. Follow `docs/BOOTSTRAP.md` from step 1. It ends with a stated exit condition and is never read
+7. Follow `docs/BOOTSTRAP.md` from step 1. It ends with a stated exit condition and is never read
    again afterwards.
 
 ## The three ideas the rest follows from
@@ -133,7 +138,13 @@ record the owner is meant to audit.
   launcher, and probes the version rather than trusting the name — on Windows, `python.exe` on
   `PATH` is often the Microsoft Store app-execution alias, which is not an interpreter. If none of
   the three is a real Python 3.9+, the hook refuses the commit instead of skipping the check.
+- The three hooks in `.claude/settings.json` cannot probe: they name one interpreter, and that file
+  is shared through git. The installers write the one they proved on the machine they ran on,
+  trying `python3` first because it is the only one of the three names that also exists on macOS
+  and Linux. The document gate warns whenever the named interpreter does not start Python 3.9+ on
+  the machine the gate runs on, so a team spanning operating systems sees the mismatch instead of
+  losing its hooks silently.
 - Claude Code recent enough to support `.claude/rules/` with `paths:` frontmatter and the
-  `InstructionsLoaded` hook. Step 3 above is the check; if rules do not load, move their content
+  `InstructionsLoaded` hook. The `/context` step above is the check; if rules do not load, move their content
   into directory-scoped `CLAUDE.md` files beside the code they govern and record which mechanism
   is in use in `techContext.md`.
