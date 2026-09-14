@@ -97,8 +97,8 @@ most often, named here so they are caught by a reviewer rather than argued about
 
 ## Tooling and tests
 
-- Formatter, linter, type checker, and test suite all pass with clean output; the single command
-  that runs them is recorded in `techContext.md`.
+- Formatter, linter, type checker, and test suite all pass with clean output; the gate that runs
+  them is listed in `.claude/gates.json`.
 - Dependencies are pinned in a committed lockfile, and the project runs inside a virtual
   environment declared there.
 - Test policy is defined in the Constitution, *Testing Standards*. Python specifics only:

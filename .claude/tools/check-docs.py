@@ -24,7 +24,9 @@ Checks performed:
   8. Kit version         - .claude/KIT_VERSION exists and is a semantic version.
   9. Client settings     - .claude/settings.json parses, and the interpreter its
      Python hooks name starts on this machine (a warning when it does not).
- 10. Unmerged kit files  - a *.kit-new an installer left beside a file of the
+ 10. Gate list          - .claude/gates.json, if present, is one run-gates.py can
+     use, so a broken list is refused at commit rather than found at the next run.
+ 11. Unmerged kit files  - a *.kit-new an installer left beside a file of the
      same name (a warning).
 
 The ban on first-person commentary in project deliverables is not checked here:
@@ -55,7 +57,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from kit_config import BUDGETS_FILE, TIER1_BUDGETS, load_budgets
+from kit_config import BUDGETS_FILE, GATES_FILE, TIER1_BUDGETS, load_budgets, load_gates
 
 # --------------------------------------------------------------------------
 # Budgets. Words are the budgeted quantity because they track context cost;
@@ -147,6 +149,9 @@ PLACEHOLDER = re.compile(r"[<>*]|NNNN")
 # both are created by bootstrap or by a gate run, so absent is valid until the
 # root is. Tier 1 completeness under memory-bank/ is check_memory_bank's job.
 CONDITIONAL_ROOTS = ("memory-bank", "logs")
+# Files the project creates rather than the kit ships, so a reference to one is
+# valid before it exists. BOOTSTRAP.md step 6 creates the gate list.
+PROJECT_FILES = {GATES_FILE}
 
 # Directories kept out of the "did you mean" corpus below. memory-bank/ is the
 # one that matters: the house style names its files by shorthand, so
@@ -317,7 +322,7 @@ def check_paths(root: Path, relative: str, lines: list[str], corpus: list[str]) 
             if resolved == ".." or resolved.startswith("../"):
                 error(relative, number, f"{kind} `{target}` points outside the repository")
                 continue
-            if resolved in OPTIONAL_DOCUMENTS:
+            if resolved in OPTIONAL_DOCUMENTS or resolved in PROJECT_FILES:
                 continue
             head = resolved.split("/")[0]
             if head in CONDITIONAL_ROOTS and not (root / head).exists():
@@ -354,6 +359,11 @@ def check_templates(root: Path, documents: dict[str, list[str]]) -> None:
     if lines is not None and not any(PLAN_ANCHOR.match(line) for line in lines):
         error(PLAN_TEMPLATE, 0,
               "no `<!-- plan -->` anchor; the SessionStart hook finds the open plan by it")
+
+
+def check_gate_list(root: Path) -> None:
+    for problem in load_gates(root)[1]:
+        error(GATES_FILE, 0, problem)
 
 
 def check_unmerged(corpus: list[str]) -> None:
@@ -552,6 +562,7 @@ def main() -> int:
     check_decisions(root)
     check_version(root)
     check_settings(root)
+    check_gate_list(root)
     check_unmerged(corpus)
 
     # On exit 2 Claude Code gives Claude the hook's stderr as the reason for the

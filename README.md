@@ -22,6 +22,9 @@ with it, as do its test suite, `tests/`, and the workflow that runs it,
 | `docs/decision-format.md` | When a decision record is written | What earns a record, and its structure |
 | `docs/templates/` | At bootstrap, per delegation, and per new language | Starting files for the Memory Bank, sub-agent briefs, and a new language's rule file |
 | `.claude/tools/check-docs.py` | Every gate run, and before every commit | The gate for these documents |
+| `.claude/tools/run-gates.py` | Whenever the gates run — it is the one gate command | The document gate, then the project's own gates, into one log with its SHA-256 |
+| `.claude/tools/kit_config.py` | By the gate, the runner and the `SessionStart` hook | Tier 1 budgets, and the reading of `budgets.json` and `gates.json` |
+| `.claude/gates.json` | Whenever the gates run | The project's own gate commands — created at bootstrap, not shipped with the kit |
 | `.claude/settings.json` | Enforced by the client, not read | Denied commands and paths, and the hooks |
 | `.claude/KIT_VERSION` | At bootstrap, and at session start | The version of the document set in force |
 | `.githooks/pre-commit` | Enforced by git on every commit | The document gate, as the layer that fails closed |
@@ -96,8 +99,8 @@ To do it by hand instead:
 
 **Evidence outlives the report.** The owner is assumed not to read code, so a claim is worth
 nothing unless it points at something the owner can open unaided: a gate log, a build output, a
-running window. The gate writes its own log; the assistant quotes it and gives its path. See
-`CLAUDE.md`, *Quality gates*.
+running window. The gate runner writes its own log and prints the log's SHA-256; the assistant
+quotes the log and gives its path and hash. See `CLAUDE.md`, *Quality gates*.
 
 **What a tool can enforce does not belong in prose.** Anthropic's documentation is explicit that
 instruction files "shape Claude's behavior but are not a hard enforcement layer", while settings

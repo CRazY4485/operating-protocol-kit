@@ -56,13 +56,16 @@ output; an unknown is asked, never assumed.
    `.claude/KIT_VERSION` in `techContext.md`, so a later session can see whether the project is
    running an outdated document set. `techContext.md` is filled progressively through steps 6 to
    8 and confirmed complete at the end.
-6. **Build the verification command before building features.** One command per runtime runs that
-   language's full gate set — as its rule file defines it — plus the document gate
-   `python .claude/tools/check-docs.py`, and prints a clear pass or fail. It appends its full
-   output to `logs/gate-<UTC timestamp>.log`, so every later claim of mine points at a file the
-   owner can open rather than at a message they must trust. Record it in `techContext.md` for
-   every operating system in use, and confirm the owner can run it themselves and read the result
-   without help. This command comes before the first feature, not after it.
+6. **Build the verification command before building features.** Copy `docs/templates/gates.json`
+   to `.claude/gates.json` and list, for each runtime, the command that runs that language's full
+   gate set as its rule file defines it: an argument list, run from the repository root with no
+   shell, limited by `os` to the operating systems it runs on. `python .claude/tools/run-gates.py`
+   then runs the document gate and every listed gate, writes their full output to
+   `logs/gate-<UTC timestamp>.log` and prints that path with the log's SHA-256, so every later
+   claim of mine points at a file the owner can open rather than at a message they must trust.
+   Record in `techContext.md` that it is the one gate command, and confirm the owner can run it
+   themselves on every operating system in use and read the result without help. This comes
+   before the first feature, not after it.
 7. **Measure the encodings, do not assume them.** For each source type in use, check what the
    toolchain actually writes on disk — some editors emit UTF-16 — and record the result in
    `techContext.md`. Where it is not UTF-8, declare it per pattern in `.gitattributes` with

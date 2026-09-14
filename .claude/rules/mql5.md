@@ -184,8 +184,9 @@ the end of the sentence.
   pure functions against fixed fixture arrays, counts assertions, prints `PASSED n / FAILED n` to
   the journal, and writes the same line to `Files/`. It compiles under the same `0 errors, 0
   warnings` condition as the product, and a run reporting zero assertions is a failure, not a pass.
-- **The gate quotes real counts.** The recorded gate command compiles the product and the test
-  script and runs the script; its output goes to the gate log like any other runtime's. A claim
+- **The gate quotes real counts.** The MQL5 gate listed in `.claude/gates.json` compiles the
+  product and the test script and runs the script; its output goes to the gate log like any other
+  runtime's. A claim
   about behaviour cites those counts or it is unverified.
 - **Where a host language exists in the project**, its suite is preferred for anything that can
   move there: it is faster, runs unattended, and costs the owner nothing. Moving a rule out of the

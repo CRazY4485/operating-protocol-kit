@@ -67,6 +67,35 @@ def copy_kit(destination: Path) -> Path:
     return destination
 
 
+def write(root: Path, relative: str, text: str) -> None:
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(text.encode("utf-8"))
+
+
+def filler(count: int) -> str:
+    """`count` words, ten to a line, so no line breaks the wrap limit."""
+    lines = [" ".join(["word"] * min(10, count - start)) for start in range(0, count, 10)]
+    return "".join(line + "\n" for line in lines)
+
+
+TIER1 = (
+    "memory-bank/activeContext.md",
+    "memory-bank/progress.md",
+    "memory-bank/decisions/decisions.md",
+)
+INDEX = "memory-bank/decisions/decisions.md"
+
+
+def bootstrap(root: Path) -> None:
+    """A minimal Memory Bank that passes every check."""
+    for relative in TIER1:
+        write(root, relative, "# State\n\nOne fact.\n")
+    write(root, INDEX, "# Decisions\n\n| Number | Summary | Status |\n|---|---|---|\n"
+                       "| 0001 | First decision | Active |\n")
+    write(root, "memory-bank/decisions/0001-first-decision.md", "# 0001 First decision\n")
+
+
 def write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes((json.dumps(value, indent=2) + "\n").encode("utf-8"))

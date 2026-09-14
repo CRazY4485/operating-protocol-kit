@@ -73,6 +73,17 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
 
 ### Added
 
+- **`.claude/tools/run-gates.py`, the one gate command.** `CLAUDE.md` said one command runs every
+  gate and appends its output to `logs/gate-<UTC timestamp>.log`, but the kit shipped no such
+  command, so the mechanism every claim of evidence rests on was rebuilt by hand in each project.
+  The runner runs the document gate, then each gate in `.claude/gates.json` that applies to this
+  operating system, from the repository root and with no shell. It streams everything to the
+  screen and to one log, and prints the log's path and SHA-256, so a report can cite a hash that
+  shows the log is the one the run wrote. It fails on any gate that fails, times out or cannot
+  start; on a gate list it cannot use, running none of it; and on a bootstrapped project with no
+  gate list, since a runtime with no recorded gate is a blocker. `.claude/gates.json` belongs to
+  the project: step 6 of `BOOTSTRAP.md` creates it from `docs/templates/gates.json`, and the
+  document gate refuses a malformed one at commit rather than at the next run.
 - **The document gate checks `.claude/settings.json`.** A file that is not valid JSON is an
   error: Claude Code ignores it, which drops every deny rule and hook at once. An interpreter
   named by the Python hooks that does not start Python 3.9+ on the machine the gate runs on is a
@@ -111,25 +122,30 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
 ### Upgrading
 
 Replace outright — a project has no reason to have edited them: `.claude/tools/check-docs.py`,
-`.claude/hooks/session-start.py`, `.claude/rules/markdown.md`, `docs/templates/activeContext.md`
-and `docs/templates/superseded.md`. New files, copied as they are:
-`.claude/tools/kit_config.py`, which `check-docs.py` now needs, `docs/templates/language-rules.md`
-and `.github/workflows/document-gate.yml`.
+`.claude/hooks/session-start.py`, `.claude/rules/markdown.md`, `.claude/rules/python.md`,
+`.claude/rules/mql5.md`, `docs/templates/activeContext.md` and `docs/templates/superseded.md`.
+New files, copied as they are: `.claude/tools/kit_config.py`, which `check-docs.py` now needs,
+`.claude/tools/run-gates.py`, `docs/templates/gates.json`, `docs/templates/language-rules.md` and
+`.github/workflows/document-gate.yml`.
 
 Merge:
 
 - `.claude/settings.json` — take the kit's `permissions.deny` list whole, and keep the project's
   own hooks. Keep the hook `command` the installer wrote into the `.kit-new`, which is the
   interpreter it proved on this machine.
-- `CLAUDE.md` — one sentence in *Quality gates*: the gate checks `.claude/settings.json`, not
-  voice; and in *Memory Bank*, Tier 1 budgets are tuned in `budgets.json`, not `techContext.md`.
-- `docs/BOOTSTRAP.md` — steps 3 and 10.
+- `CLAUDE.md` — *Quality gates*: the one gate command is `run-gates.py`, its log comes with a
+  hash, and the document gate checks `.claude/settings.json`, not voice. *Memory Bank*: Tier 1
+  budgets are tuned in `budgets.json`, not `techContext.md`.
+- `docs/BOOTSTRAP.md` — steps 3, 6 and 10.
 
 Then, beyond the merge:
 
 - A `memory-bank/activeContext.md` made from the 3.x template still carries that template's
   preamble, about half of its 400-word budget. Replace the preamble with the two comments of the
   new template, and keep the `<!-- plan -->` anchor where it is.
+- The gate command a project recorded in `techContext.md` becomes an entry in
+  `.claude/gates.json`, started from `docs/templates/gates.json`; `techContext.md` then records
+  `python .claude/tools/run-gates.py` as the one gate command.
 - A Tier 1 budget the project raised in `techContext.md` moves to `memory-bank/budgets.json`,
   for example `{"memory-bank/progress.md": 900}`; the gate never read the old place.
 - On GitHub, make the job in `.github/workflows/document-gate.yml` a required status check.

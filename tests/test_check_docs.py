@@ -13,7 +13,18 @@ from pathlib import Path
 
 import pytest
 
-from kit_testing import SETTINGS, load_gate, load_script, point_hooks_at, run_gate, write_json
+from kit_testing import (
+    INDEX,
+    SETTINGS,
+    bootstrap,
+    filler,
+    load_gate,
+    load_script,
+    point_hooks_at,
+    run_gate,
+    write,
+    write_json,
+)
 
 GATE = load_gate()
 SESSION_START = load_script(Path(".claude/hooks/session-start.py"), "session_start")
@@ -21,13 +32,6 @@ SESSION_START = load_script(Path(".claude/hooks/session-start.py"), "session_sta
 # A governed document with a word budget and a wrap limit.
 BOOTSTRAP = "docs/BOOTSTRAP.md"
 TIER1 = sorted(GATE.TIER1_BUDGETS)
-INDEX = "memory-bank/decisions/decisions.md"
-
-
-def write(root: Path, relative: str, text: str) -> None:
-    path = root / relative
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(text.encode("utf-8"))
 
 
 def append(root: Path, relative: str, text: str) -> None:
@@ -39,19 +43,10 @@ def word_count(root: Path, relative: str) -> int:
     return len((root / relative).read_text(encoding="utf-8").split())
 
 
-def filler(count: int) -> str:
-    """`count` words, ten to a line, so no line breaks the wrap limit."""
-    lines = [" ".join(["word"] * min(10, count - start)) for start in range(0, count, 10)]
-    return "".join(line + "\n" for line in lines)
+def test_the_test_suites_tier1_list_is_the_kits() -> None:
+    from kit_testing import TIER1 as SUITE_TIER1
 
-
-def bootstrap(root: Path) -> None:
-    """A minimal Memory Bank that passes every check."""
-    for relative in TIER1:
-        write(root, relative, "# State\n\nOne fact.\n")
-    write(root, INDEX, "# Decisions\n\n| Number | Summary | Status |\n|---|---|---|\n"
-                       "| 0001 | First decision | Active |\n")
-    write(root, "memory-bank/decisions/0001-first-decision.md", "# 0001 First decision\n")
+    assert sorted(SUITE_TIER1) == TIER1
 
 
 def test_a_clean_copy_of_the_kit_passes(kit_tree: Path) -> None:
