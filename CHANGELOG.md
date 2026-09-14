@@ -42,8 +42,11 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
   warning — a warning rather than an error, because the file is shared and a name that is right
   on one operating system can be missing on another. The gate runs in `.githooks/pre-commit`, so
   the mismatch shows up on the first commit made on such a machine.
-- **Tests for the installers and the gate**, under `tests/`, run with `python -m pytest`. They
-  are part of the kit's own repository and are not copied into a project.
+- **A test suite**, under `tests/`, run with `python -m pytest`. Every check the document gate
+  makes has a test that plants the defect in a copy of the kit and asserts the finding it must
+  produce, so each check is seen to fire rather than assumed to; the installers and the deny rules
+  are covered too. The suite belongs to the kit's own repository and is never copied into a
+  project.
 
 ## 3.0.1 — 2026-09-07
 
