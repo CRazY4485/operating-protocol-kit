@@ -43,6 +43,7 @@ Usage:
     python .claude/tools/check-docs.py            # from the repository root
     python .claude/tools/check-docs.py --root DIR
     python .claude/tools/check-docs.py --hook     # exit 2 on failure, for a PreToolUse hook
+    python .claude/tools/check-docs.py --inputs   # list the paths it reads, and check nothing
 
 Exit code 0 means every check passed. Exit code 1 means at least one ERROR.
 With --hook the failure code is 2, which is what Claude Code requires a
@@ -458,6 +459,17 @@ def check_gate_list(root: Path) -> None:
         error(GATES_FILE, 0, problem)
 
 
+def gate_inputs() -> list[str]:
+    """Every path whose content the gate reads, files and directories alike.
+
+    .githooks/pre-commit holds these to the index: the gate reads the working
+    tree, and git commits the index, so where the two differ the gate would
+    judge a different commit from the one being made.
+    """
+    return sorted({*BUDGETS, "README.md", "CHANGELOG.md", RULES, TEMPLATES, "memory-bank",
+                   ".claude/KIT_VERSION", SETTINGS, GATES_FILE, UPGRADE_NOTES})
+
+
 def check_upgrade_pending(root: Path) -> None:
     if (root / UPGRADE_NOTES).exists():
         warn(UPGRADE_NOTES, 0, "kit upgrade steps are pending; do them, then delete this file")
@@ -605,7 +617,16 @@ def main() -> int:
         action="store_true",
         help="exit 2 instead of 1 on failure, so a PreToolUse hook blocks the tool call",
     )
+    parser.add_argument(
+        "--inputs",
+        action="store_true",
+        help="print the paths the gate reads, one per line, and check nothing",
+    )
     arguments = parser.parse_args()
+    if arguments.inputs:
+        # Bytes, so Windows writes no \r that a shell reading the list would keep.
+        sys.stdout.buffer.write("".join(path + "\n" for path in gate_inputs()).encode("utf-8"))
+        return 0
     root = Path(arguments.root).resolve()
 
     documents: dict[str, list[str]] = {}

@@ -9,7 +9,8 @@
 #
 # Git is the opposite: any non-zero exit here refuses the commit. This file is
 # therefore the layer that fails closed, and it protects the repository from
-# every committer — the agent, the owner, an IDE, or a script.
+# every committer — the agent, the owner, an IDE, or a script. It judges the
+# commit being made, not the working tree: see the check before the gate runs.
 #
 # Enable it once per clone (it is not automatic, because git never runs hooks
 # from a directory it has not been pointed at):
@@ -49,6 +50,30 @@ if [ -z "$interpreter" ]; then
     printf 'pre-commit: the document gate cannot run, so the commit is REFUSED rather\n' >&2
     printf 'pre-commit: than allowed through unchecked. Install Python 3.%s or later,\n' "$MINIMUM_PYTHON_MINOR" >&2
     printf 'pre-commit: then record the interpreter and its version in techContext.md.\n' >&2
+    exit 1
+fi
+
+# The gate reads the working tree, and git commits the index. For every file
+# the gate reads, the two must agree, or the gate judges a different commit
+# from this one: a defect staged and then tidied away in the working tree would
+# pass, and a record left untracked while its index row is staged would be
+# missing from the history. So the commit waits until they agree.
+inputs=$("$interpreter" "$gate" --inputs | tr -d '\r') && [ -n "$inputs" ] || {
+    printf 'pre-commit: the document gate could not list what it reads; commit refused.\n' >&2
+    exit 1
+}
+# $inputs is split on purpose: each path is its own pathspec, and none holds a space.
+# shellcheck disable=SC2086
+unstaged=$(git -C "$root" diff --name-only -- $inputs)
+# shellcheck disable=SC2086
+untracked=$(git -C "$root" ls-files --others --exclude-standard -- $inputs ':(exclude)*.kit-new')
+if [ -n "$unstaged$untracked" ]; then
+    printf 'pre-commit: files the document gate reads differ from what this commit holds:\n' >&2
+    if [ -n "$unstaged" ]; then printf '%s\n' "$unstaged" | sed 's/^/  not staged: /' >&2; fi
+    if [ -n "$untracked" ]; then printf '%s\n' "$untracked" | sed 's/^/  untracked:  /' >&2; fi
+    printf 'pre-commit: the gate reads the working tree, so it would check something other\n' >&2
+    printf 'pre-commit: than this commit. Stage them, or set them aside with\n' >&2
+    printf 'pre-commit: `git stash push --keep-index --include-untracked`, then commit again.\n' >&2
     exit 1
 fi
 

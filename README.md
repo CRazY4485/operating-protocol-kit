@@ -134,10 +134,14 @@ reaches its timeout as a **non-blocking** error, and the tool call proceeds. A `
 therefore fails open and cannot be the last line of defence. Git behaves the other way: any
 non-zero exit from `.githooks/pre-commit` refuses the commit. So the document gate runs in both
 places — in Claude Code for fast feedback, and in git as the check that actually holds, including
-when Python is absent, and including for commits nobody asked Claude to make. Git runs that hook
-only in a clone told to, so `.github/workflows/document-gate.yml` runs the gate once more on every
-pull request and every push to the default branch; made a required status check, it keeps a
-failing change out of the default branch whatever the clone it came from was configured to do.
+when Python is absent, and including for commits nobody asked Claude to make. The gate reads the
+working tree while git commits the index, so the hook first refuses a commit while any file the
+gate reads has changes that are not staged or is not tracked: otherwise it would judge a different
+commit from the one being made. Commit with everything staged, as `git add -A && git commit`
+does, or set the rest aside with `git stash push --keep-index --include-untracked`. Git runs that
+hook only in a clone told to, so `.github/workflows/document-gate.yml` runs the gate once more on
+every pull request and every push to the default branch; made a required status check, it keeps
+a failing change out of the default branch whatever the clone it came from was configured to do.
 
 **Continuity is a file, or it is nothing.** This project's session boundary is `/clear`, which
 starts a new conversation. Anthropic's documentation lists what a *compaction* re-injects from

@@ -153,6 +153,15 @@ the voice of deliverables, which it never did.
   pending are never overwritten. The work both installers share — this, and naming the hook
   interpreter — now lives once, in the kit-only `install_support.py`, rather than as the same
   Python embedded in two shells. A project upgrading from 3.x to 4.0.0 gets its notes this way.
+- **The commit gate judges the commit being made.** `.githooks/pre-commit` ran the document gate
+  over the working tree, and git commits the index. A defect staged and then tidied away in the
+  working tree passed the gate and entered the history, and a decision record left untracked
+  while its index row was staged let a commit index a file it did not contain. The hook now asks
+  the gate which paths it reads (`check-docs.py --inputs`) and refuses the commit while any of
+  them has unstaged changes or is untracked, naming each one and the way out: stage it, or set it
+  aside with `git stash push --keep-index --include-untracked`. The kit's own checkpoint,
+  `git add -A && git commit`, never meets the refusal, and neither does a partial commit of files
+  the gate does not read. Found by the live test of this release in a real Claude Code session.
 - **`install.ps1` works when PowerShell 7 starts it.** Windows PowerShell 5.1 started from
   PowerShell 7 — every step on a GitHub Windows runner, or `powershell -File` typed in a
   PowerShell 7 terminal — inherits a module path it cannot load `Get-FileHash` from, and the
@@ -189,8 +198,8 @@ the voice of deliverables, which it never did.
 
 Replace outright — a project has no reason to have edited them: `.claude/tools/check-docs.py`,
 `.claude/hooks/session-start.py`, `.claude/rules/markdown.md`, `.claude/rules/python.md`,
-`.claude/rules/dotnet.md`, `.claude/rules/mql5.md`, `docs/templates/activeContext.md` and
-`docs/templates/superseded.md`.
+`.claude/rules/dotnet.md`, `.claude/rules/mql5.md`, `.githooks/pre-commit`,
+`docs/templates/activeContext.md` and `docs/templates/superseded.md`.
 New files, copied as they are: `.claude/tools/kit_config.py`, which `check-docs.py` now needs,
 `.claude/tools/run-gates.py`, `docs/templates/gates.json`, `docs/templates/voice.json`,
 `docs/templates/language-rules.md` and `.github/workflows/document-gate.yml`.
