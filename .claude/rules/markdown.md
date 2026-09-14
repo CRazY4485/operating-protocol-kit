@@ -26,8 +26,9 @@ its brief, and its text is reviewed against them before acceptance.
   defect.
 - **No first person, no narrator** in a project deliverable. No "I recommend", "I believe", "let
   me", "we should". The document states the requirement, decision, or fact itself: "The system
-  retries failed payments three times", not "I propose retrying failed payments three times". The
-  document gate greps for these phrases, so this rule fails a build rather than a review.
+  retries failed payments three times", not "I propose retrying failed payments three times". This
+  rule is held by review, against the checkable test below, not by the document gate: a
+  deliverable is written in the working language, and a phrase list covers only one language.
 - **No meta-commentary.** Nothing about how the document was produced, what was considered and
   rejected in conversation, what will be done next, or what the reader might ask. A document is
   read long after the conversation ends; anything true only inside the conversation does not belong
@@ -69,10 +70,11 @@ its brief, and its text is reviewed against them before acceptance.
 
 ## Gate
 
-`python .claude/tools/check-docs.py` is the gate for every governed document, and part of the
-project's single gate command. It checks encoding and line shape, word and line budgets,
-cross-reference resolution, Tier 1 completeness, the decision index against the decision files,
-the first-person ban above, and the presence of `.claude/KIT_VERSION`. It exits non-zero on any
+`python .claude/tools/check-docs.py` is the gate for every governed document and every template
+in `docs/templates/`, and part of the project's single gate command. It checks encoding and line
+shape, word and line budgets, cross-references and referenced paths, Tier 1 completeness, the
+decision index against the decision files, the presence of `.claude/KIT_VERSION`, and that
+`.claude/settings.json` parses and names a hook interpreter that starts. It exits non-zero on any
 error and prints every finding with its file and line.
 
 It runs in two places. A `PreToolUse` hook in `.claude/settings.json` runs it before any

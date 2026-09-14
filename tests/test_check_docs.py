@@ -13,9 +13,10 @@ from pathlib import Path
 
 import pytest
 
-from kit_testing import SETTINGS, load_gate, point_hooks_at, run_gate, write_json
+from kit_testing import SETTINGS, load_gate, load_script, point_hooks_at, run_gate, write_json
 
 GATE = load_gate()
+SESSION_START = load_script(Path(".claude/hooks/session-start.py"), "session_start")
 
 # A governed document with a word budget and a wrap limit.
 BOOTSTRAP = "docs/BOOTSTRAP.md"
@@ -74,6 +75,25 @@ def test_an_error_exits_2_when_run_as_a_hook(kit_tree: Path) -> None:
     write(kit_tree, ".claude/KIT_VERSION", "one\n")
 
     assert run_gate(kit_tree, "--hook").code == 2
+
+
+def test_findings_go_to_stderr_when_run_as_a_hook(kit_tree: Path) -> None:
+    # On exit 2 Claude Code shows Claude the hook's stderr as the reason for
+    # the block; stdout would leave Claude knowing only that it was blocked.
+    write(kit_tree, ".claude/KIT_VERSION", "one\n")
+
+    run = run_gate(kit_tree, "--hook")
+
+    assert "'one' is not a semantic version" in run.stderr
+    assert run.stdout == ""
+
+
+def test_findings_go_to_stdout_otherwise(kit_tree: Path) -> None:
+    write(kit_tree, ".claude/KIT_VERSION", "one\n")
+
+    run = run_gate(kit_tree)
+
+    assert "'one' is not a semantic version" in run.stdout
 
 
 def test_warnings_alone_pass(kit_tree: Path) -> None:
@@ -235,6 +255,118 @@ def test_changelog_may_name_a_path_that_has_moved(kit_tree: Path) -> None:
     append(kit_tree, "CHANGELOG.md", "- Moved `.claude/tools/gone.py`.\n")
 
     assert run_gate(kit_tree).errors == 0
+
+
+@pytest.mark.parametrize("link", ["[format](decision-format.md)", "[readme](../README.md)"])
+def test_resolves_a_link_against_the_linking_documents_directory(
+    kit_tree: Path, link: str
+) -> None:
+    # Markdown, GitHub and every editor resolve a relative link this way.
+    append(kit_tree, BOOTSTRAP, f"See {link}.\n")
+
+    run = run_gate(kit_tree)
+
+    assert run.errors == 0, run.output
+
+
+def test_rejects_a_root_relative_link_written_in_a_subdirectory(kit_tree: Path) -> None:
+    # From docs/ this link opens docs/docs/decision-format.md, which does not exist.
+    append(kit_tree, BOOTSTRAP, "See [format](docs/decision-format.md).\n")
+
+    run = run_gate(kit_tree)
+
+    assert "link target `docs/decision-format.md` points at no file" in run.output
+
+
+def test_rejects_a_link_that_leaves_the_repository(kit_tree: Path) -> None:
+    append(kit_tree, "README.md", "[outside](../outside.md)\n")
+
+    assert "link target `../outside.md` points outside the repository" in run_gate(kit_tree).output
+
+
+# --- templates -----------------------------------------------------------------------
+
+TEMPLATE = "docs/templates/subagent-brief.md"
+PLAN_TEMPLATE = "docs/templates/activeContext.md"
+
+
+def test_rejects_crlf_in_a_template(kit_tree: Path) -> None:
+    append(kit_tree, TEMPLATE, "A line.\r\n")
+
+    assert f"ERROR {TEMPLATE}: contains CRLF line endings" in run_gate(kit_tree).output
+
+
+def test_rejects_a_template_line_over_the_wrap_limit(kit_tree: Path) -> None:
+    append(kit_tree, TEMPLATE, "x" * (GATE.WRAP_LIMIT + 1) + "\n")
+
+    assert f"ERROR {TEMPLATE}:" in run_gate(kit_tree).output
+
+
+def test_rejects_a_reference_to_nothing_in_a_template(kit_tree: Path) -> None:
+    append(kit_tree, TEMPLATE, "See *Nonexistent Section Name*.\n")
+
+    assert "reference *Nonexistent Section Name*" in run_gate(kit_tree).output
+
+
+def test_gates_a_template_added_later(kit_tree: Path) -> None:
+    write(kit_tree, "docs/templates/backlog.md", "# Backlog\r\n")
+
+    assert "ERROR docs/templates/backlog.md: contains CRLF" in run_gate(kit_tree).output
+
+
+@pytest.mark.parametrize("template", ["activeContext.md", "decisions.md", "superseded.md",
+                                      "subagent-brief.md"])
+def test_rejects_a_missing_template(kit_tree: Path, template: str) -> None:
+    (kit_tree / "docs/templates" / template).unlink()
+
+    assert f"ERROR docs/templates/{template}: template is missing" in run_gate(kit_tree).output
+
+
+def test_requires_the_plan_anchor_in_the_active_context_template(kit_tree: Path) -> None:
+    path = kit_tree / PLAN_TEMPLATE
+    path.write_bytes(path.read_bytes().replace(b"<!-- plan -->\n", b""))
+
+    run = run_gate(kit_tree)
+
+    assert f"ERROR {PLAN_TEMPLATE}: no `<!-- plan -->` anchor" in run.output
+
+
+def test_gate_and_session_start_hook_read_the_same_plan_anchor() -> None:
+    assert GATE.PLAN_ANCHOR.pattern == SESSION_START.PLAN_ANCHOR.pattern
+    assert GATE.PLAN_ANCHOR.flags == SESSION_START.PLAN_ANCHOR.flags
+
+
+@pytest.mark.parametrize("template", sorted(GATE.TEMPLATE_TARGETS))
+def test_rejects_a_template_over_the_budget_of_the_file_it_becomes(
+    kit_tree: Path, template: str
+) -> None:
+    target = GATE.TEMPLATE_TARGETS[template]
+    budget = GATE.TIER1_BUDGETS[target]
+    append(kit_tree, template, filler(budget - word_count(kit_tree, template) + 1))
+
+    run = run_gate(kit_tree)
+
+    assert f"ERROR {template}: {budget + 1} words is over the {budget}-word budget of {target}" in (
+        run.output
+    )
+
+
+def test_the_shipped_tier1_templates_leave_room_under_their_budgets(kit_tree: Path) -> None:
+    # A template near its budget makes every bootstrapped project start there.
+    for template, target in GATE.TEMPLATE_TARGETS.items():
+        assert word_count(kit_tree, template) <= GATE.TIER1_BUDGETS[target] * 0.6, template
+
+
+# --- unmerged kit files ----------------------------------------------------------------
+
+
+def test_warns_on_an_unmerged_kit_file(kit_tree: Path) -> None:
+    write(kit_tree, ".claude/settings.json.kit-new", "{}\n")
+
+    run = run_gate(kit_tree)
+
+    assert run.code == 0, run.output
+    assert "WARN  .claude/settings.json.kit-new: unmerged kit file" in run.output
 
 
 # --- Memory Bank -------------------------------------------------------------------

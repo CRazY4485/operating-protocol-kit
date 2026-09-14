@@ -6,18 +6,28 @@ rules do not depend on anyone's attention. See CLAUDE.md, *Quality gates*.
 
 Checks performed:
   1. Encoding and shape  - UTF-8 decodable, LF-only, no trailing whitespace,
-     wrap limit per file class.
-  2. Document budgets    - words and (for CLAUDE.md) lines, per the table below.
+     wrap limit per file class. Covers every template in docs/templates/.
+  2. Document budgets    - words and (for CLAUDE.md) lines, per the table below,
+     and no Tier 1 template over the budget of the file bootstrap makes of it.
   3. Cross-references    - every *Section Name* reference resolves to a real
      heading or bold label somewhere in the document set.
-  4. Memory Bank state   - if memory-bank/ exists, every Tier 1 file exists and
+  4. Referenced paths    - a Markdown link target, resolved against the linking
+     document's directory, and a backticked path under a governed prefix exist.
+  5. Memory Bank state   - if memory-bank/ exists, every Tier 1 file exists and
      is non-empty; if it does not, nothing is required (pre-bootstrap).
-  5. Decision index      - every number in the index table has a matching
+  6. Decision index      - every number in the index table has a matching
      decisions/NNNN-*.md file, and every such file appears in the index.
-  6. Authored voice      - no first-person commentary in project deliverables.
-  7. Kit version         - .claude/KIT_VERSION exists and is a semantic version.
-  8. Client settings     - .claude/settings.json parses, and the interpreter its
+  7. Templates           - every template bootstrap copies exists, and the
+     activeContext.md template keeps the anchor the SessionStart hook reads.
+  8. Kit version         - .claude/KIT_VERSION exists and is a semantic version.
+  9. Client settings     - .claude/settings.json parses, and the interpreter its
      Python hooks name starts on this machine (a warning when it does not).
+ 10. Unmerged kit files  - a *.kit-new an installer left beside a file of the
+     same name (a warning).
+
+The ban on first-person commentary in project deliverables is not checked here:
+deliverables are written in the working language, and a phrase list covers one
+language. It is held by review; see .claude/rules/markdown.md.
 
 Usage:
     python .claude/tools/check-docs.py            # from the repository root
@@ -36,6 +46,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import posixpath
 import re
 import subprocess
 import sys
@@ -86,28 +97,27 @@ TIER1_BUDGETS: dict[str, int] = {
     "memory-bank/decisions/decisions.md": 400,
 }
 
-# Documents that speak as the project and must carry no first-person commentary.
-# The rule documents are excluded: they state the assistant's own behaviour
-# commitments in the first person deliberately. See CLAUDE.md, *Authored documents*.
-RULE_DOCUMENTS = {
-    "CLAUDE.md",
-    "docs/ARCHITECTURAL_CONSTITUTION.md",
-    "docs/BOOTSTRAP.md",
-    "docs/decision-format.md",
-    "README.md",
-    "CHANGELOG.md",
+# Templates are copied into every project and, at bootstrap, into memory-bank/,
+# so they are held to the same shape as the documents that name them.
+TEMPLATES = "docs/templates"
+REQUIRED_TEMPLATES = (
+    "docs/templates/activeContext.md",
+    "docs/templates/decisions.md",
+    "docs/templates/subagent-brief.md",
+    "docs/templates/superseded.md",
+)
+# The Tier 1 file each template becomes at bootstrap (BOOTSTRAP.md step 5). A
+# template over that file's budget starts every bootstrapped project over it,
+# before a single fact has been written.
+TEMPLATE_TARGETS = {
+    "docs/templates/activeContext.md": "memory-bank/activeContext.md",
+    "docs/templates/decisions.md": "memory-bank/decisions/decisions.md",
 }
-
-FIRST_PERSON_PATTERNS = [
-    r"\bI recommend\b",
-    r"\bI believe\b",
-    r"\bI think\b",
-    r"\bI suggest\b",
-    r"\bI would\b",
-    r"\blet me\b",
-    r"\bwe should\b",
-    r"\bin my opinion\b",
-]
+# The SessionStart hook finds the open plan by this anchor. It must match
+# PLAN_ANCHOR in .claude/hooks/session-start.py exactly; a test holds them equal.
+PLAN_TEMPLATE = "docs/templates/activeContext.md"
+PLAN_ANCHOR = re.compile(r"^\s*<!--\s*plan\s*-->\s*$", re.IGNORECASE)
+UNMERGED_SUFFIX = ".kit-new"
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 FENCE = re.compile(r"^\s*(```|~~~)")
@@ -205,8 +215,8 @@ def collect_anchors(documents: dict[str, list[str]]) -> set[str]:
 # --------------------------------------------------------------------------
 
 
-def check_shape(root: Path, relative: str, raw: bytes) -> list[str] | None:
-    """Encoding, line endings, trailing whitespace, wrap limit."""
+def check_shape(relative: str, raw: bytes, limit: int | None) -> list[str] | None:
+    """Encoding, line endings, trailing whitespace, and a wrap limit unless it is None."""
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as err:
@@ -220,7 +230,6 @@ def check_shape(root: Path, relative: str, raw: bytes) -> list[str] | None:
     elif raw:
         warn(relative, len(lines), "no trailing newline at end of file")
 
-    limit = BUDGETS.get(relative, {}).get("wrap")
     inside_fence = False
     for number, line in enumerate(lines, start=1):
         if line != line.rstrip():
@@ -293,29 +302,61 @@ def check_paths(root: Path, relative: str, lines: list[str], corpus: list[str]) 
             if PLACEHOLDER.search(target):
                 continue
             candidate = target.split("#")[0].rstrip("/")
-            if not candidate or candidate in OPTIONAL_DOCUMENTS:
+            if not candidate:
                 continue
-            head = candidate.split("/")[0]
+            # A Markdown link resolves against the linking document's directory,
+            # as GitHub and every editor resolve it; a backticked path is written
+            # from the project root by house style.
+            base = posixpath.dirname(relative) if kind == "link target" else ""
+            resolved = posixpath.normpath(posixpath.join(base, candidate))
+            if resolved == ".." or resolved.startswith("../"):
+                error(relative, number, f"{kind} `{target}` points outside the repository")
+                continue
+            if resolved in OPTIONAL_DOCUMENTS:
+                continue
+            head = resolved.split("/")[0]
             if head in CONDITIONAL_ROOTS and not (root / head).exists():
                 continue
-            if (root / candidate).exists():
+            if (root / resolved).exists():
                 continue
             complete = [f for f in corpus if f.endswith("/" + candidate)]
             if complete:
+                real = posixpath.relpath(complete[0], base) if base else complete[0]
                 also = f" (and {len(complete) - 1} more)" if len(complete) > 1 else ""
                 error(relative, number,
-                      f"{kind} `{target}` is incomplete; the file is at `{complete[0]}`{also}")
+                      f"{kind} `{target}` is incomplete; the file is at `{real}`{also}")
             elif required:
-                error(relative, number, f"{kind} `{target}` points at no file in the repository")
+                where = f", resolved from `{base}/`" if base else ""
+                error(relative, number,
+                      f"{kind} `{target}` points at no file in the repository{where}")
 
 
-def check_first_person(relative: str, lines: list[str]) -> None:
-    if relative in RULE_DOCUMENTS or relative.startswith(".claude/rules/"):
-        return
-    for number, text in strip_code_blocks(lines):
-        for pattern in FIRST_PERSON_PATTERNS:
-            if re.search(pattern, text, flags=re.IGNORECASE):
-                error(relative, number, f"first-person commentary matching /{pattern}/")
+def check_templates(root: Path, documents: dict[str, list[str]]) -> None:
+    for template in REQUIRED_TEMPLATES:
+        if not (root / template).exists():
+            error(template, 0, "template is missing; bootstrap and delegation copy it")
+    for template, target in TEMPLATE_TARGETS.items():
+        lines = documents.get(template)
+        if lines is None:
+            continue
+        words = sum(len(line.split()) for line in lines)
+        budget = TIER1_BUDGETS[target]
+        if words > budget:
+            error(template, 0,
+                  f"{words} words is over the {budget}-word budget of {target}, "
+                  "which bootstrap copies it into")
+    lines = documents.get(PLAN_TEMPLATE)
+    if lines is not None and not any(PLAN_ANCHOR.match(line) for line in lines):
+        error(PLAN_TEMPLATE, 0,
+              "no `<!-- plan -->` anchor; the SessionStart hook finds the open plan by it")
+
+
+def check_unmerged(corpus: list[str]) -> None:
+    """An installer never overwrites a file; it leaves the kit's version beside it."""
+    for relative in corpus:
+        if relative.endswith(UNMERGED_SUFFIX):
+            original = relative[: -len(UNMERGED_SUFFIX)]
+            warn(relative, 0, f"unmerged kit file; merge it into {original}, then delete it")
 
 
 def check_memory_bank(root: Path) -> None:
@@ -455,16 +496,23 @@ def main() -> int:
             if relative not in OPTIONAL_DOCUMENTS:
                 error(relative, 0, "governed document is missing")
             continue
-        lines = check_shape(root, relative, path.read_bytes())
+        lines = check_shape(relative, path.read_bytes(), BUDGETS[relative]["wrap"])
         if lines is not None:
             documents[relative] = lines
 
     for extra in ("README.md", "CHANGELOG.md"):
         path = root / extra
         if path.exists():
-            lines = check_shape(root, extra, path.read_bytes())
+            lines = check_shape(extra, path.read_bytes(), None)
             if lines is not None:
                 documents[extra] = lines
+
+    # Every template, not a list of them, so one added later is gated too.
+    for path in sorted((root / TEMPLATES).glob("*.md")):
+        relative = path.relative_to(root).as_posix()
+        lines = check_shape(relative, path.read_bytes(), WRAP_LIMIT)
+        if lines is not None:
+            documents[relative] = lines
 
     anchors = collect_anchors(documents)
     corpus = collect_repository_files(root)
@@ -476,21 +524,26 @@ def main() -> int:
         # release, and a path that has since moved is correct history there.
         if relative != "CHANGELOG.md":
             check_paths(root, relative, lines, corpus)
-        check_first_person(relative, lines)
 
+    check_templates(root, documents)
     check_memory_bank(root)
     check_decisions(root)
     check_version(root)
     check_settings(root)
+    check_unmerged(corpus)
 
+    # On exit 2 Claude Code gives Claude the hook's stderr as the reason for the
+    # block, so a finding printed to stdout would block the commit unexplained.
+    stream = sys.stderr if arguments.hook else sys.stdout
     errors = [f for f in findings if f.level == "ERROR"]
     warnings = [f for f in findings if f.level == "WARN"]
     for finding in sorted(findings, key=lambda f: (f.path, f.line)):
         location = f"{finding.path}:{finding.line}" if finding.line else finding.path
-        print(f"{finding.level:5} {location}: {finding.message}")
+        print(f"{finding.level:5} {location}: {finding.message}", file=stream)
 
     checked = len(documents)
-    print(f"\ncheck-docs: {checked} documents checked, {len(errors)} errors, {len(warnings)} warnings")
+    print(f"\ncheck-docs: {checked} documents checked, {len(errors)} errors, {len(warnings)} warnings",
+          file=stream)
     if not errors:
         return 0
     # A PreToolUse hook must exit 2 to block the tool call; any other non-zero

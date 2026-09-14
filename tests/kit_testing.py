@@ -22,14 +22,18 @@ SETTINGS = Path(".claude") / "settings.json"
 DEVELOPMENT_ONLY = ("tests/", ".github/")
 
 
-def load_gate() -> ModuleType:
-    """The gate as a module, for reading its declared figures rather than copying them."""
-    spec = importlib.util.spec_from_file_location("check_docs", KIT / GATE)
+def load_script(relative: Path, name: str) -> ModuleType:
+    """A kit script as a module, for reading its declared figures rather than copying them."""
+    spec = importlib.util.spec_from_file_location(name, KIT / relative)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module  # dataclasses resolves annotations through it
     spec.loader.exec_module(module)
     return module
+
+
+def load_gate() -> ModuleType:
+    return load_script(GATE, "check_docs")
 
 
 def git(cwd: Path, *arguments: str) -> str:

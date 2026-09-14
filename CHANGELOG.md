@@ -33,6 +33,29 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
   `git push *--force*`, `git push -f*`, `git push * -f*` and `git push *+*`, and
   `git reset --hard *` is `git reset *--hard*`. Every git rule keeps its `PowerShell` twin.
 - **`find … -delete`, `truncate` and `shred` are denied** for `Bash`, beside `rm`.
+- **The first-person check is removed, because it never ran.** It skipped every rule document and
+  every path under `.claude/rules/`, and those were the only documents the gate loaded, so it
+  returned before its first comparison on every run while `.claude/rules/markdown.md` said the
+  gate "greps for these phrases". It is removed rather than aimed at the deliverables: they are
+  written in the working language, and an English phrase list would pass nearly all of them. The
+  rule stands, held by review against the checkable test in `markdown.md`, and neither that file
+  nor `CLAUDE.md` claims the gate enforces it any more.
+- **A commit the `PreToolUse` hook blocks now tells Claude why.** On exit 2 Claude Code gives
+  Claude the hook's stderr as the reason, and the gate printed its findings to stdout, so Claude
+  saw a refused commit and nothing else. With `--hook` the findings now go to stderr.
+- **A Markdown link resolves against the directory of the document it is in**, as GitHub and
+  every editor resolve it. The gate resolved every link from the repository root, so a correct
+  link from `docs/` to a sibling was reported as incomplete, and the path the report suggested
+  would have been a broken link. A link that leaves the repository is now an error of its own.
+- **`docs/templates/activeContext.md` fits the budget of the file it becomes.** At 433 words it
+  was over the 400-word Tier 1 budget of `memory-bank/activeContext.md`, so every project started
+  over budget the moment step 5 of `BOOTSTRAP.md` copied it. It is 231 words now: the rationale it
+  repeated from `CLAUDE.md` is referenced instead, and the instruction to keep the plan anchor
+  through translation sits beside the anchor.
+- **A reference in `docs/templates/superseded.md` resolved to nothing.** It named the
+  "Alternatives rejected" section, a heading that exists only inside the example record in a
+  code block; it now points at *Structure of a record*. The gate found it the first time it read
+  the templates.
 
 ### Added
 
@@ -42,6 +65,13 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
   warning — a warning rather than an error, because the file is shared and a name that is right
   on one operating system can be missing on another. The gate runs in `.githooks/pre-commit`, so
   the mismatch shows up on the first commit made on such a machine.
+- **The templates are gated.** Every `docs/templates/*.md` is checked for shape, references and
+  paths like the documents that name them; the four templates bootstrap and delegation copy must
+  exist; a Tier 1 template must fit the budget of the file bootstrap makes of it; and the
+  `activeContext.md` template must keep the `<!-- plan -->` anchor, with a test holding the gate's
+  pattern for it equal to the `SessionStart` hook's.
+- **Unmerged kit files are reported.** A `*.kit-new` an installer left beside a file is a warning
+  naming the file to merge it into. It was an untracked file that `git add -A` would commit.
 - **A test suite**, under `tests/`, run with `python -m pytest`. Every check the document gate
   makes has a test that plants the defect in a copy of the kit and asserts the finding it must
   produce, so each check is seen to fire rather than assumed to; the installers and the deny rules
