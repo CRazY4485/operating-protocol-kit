@@ -85,7 +85,9 @@ output; an unknown is asked, never assumed.
     `PreToolUse` run of the document gate, and `SessionStart`, which reports the project's state
     into a fresh session. Claude Code lets a hook it cannot start fail open, so this layer is a
     fast signal, not the gate. `.githooks/pre-commit` is the gate, and git refuses the commit on
-    any non-zero exit. Confirm `core.hooksPath` is set, extend the deny list with anything this
+    any non-zero exit. Confirm `core.hooksPath` is set; where the repository is on GitHub, have the
+    owner make the job in `.github/workflows/document-gate.yml` a required status check, which
+    holds the gate for a clone that never set it. Extend the deny list with anything this
     project must never run, then demonstrate two refusals in front of the owner: a deny rule
     firing, and a commit refused by the document gate. A protection the owner has not watched work
     does not count as installed.

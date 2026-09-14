@@ -72,6 +72,15 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
   pattern for it equal to the `SessionStart` hook's.
 - **Unmerged kit files are reported.** A `*.kit-new` an installer left beside a file is a warning
   naming the file to merge it into. It was an untracked file that `git add -A` would commit.
+- **`.github/workflows/document-gate.yml` runs the document gate on every push and pull request.**
+  `.githooks/pre-commit` binds only in a clone that ran `git config core.hooksPath .githooks`, and
+  nothing reported a clone that had not. The workflow is copied into projects; made a required
+  status check, which `BOOTSTRAP.md` step 10 now asks the owner for, it holds the gate for every
+  clone. `.github/workflows/kit-tests.yml` runs the kit's own suite on Linux with Python 3.9 and
+  the newest release, and on Windows, and stays with the kit.
+- **The `SessionStart` report flags a `core.hooksPath` that is not `.githooks`.** It flagged the
+  setting only when it was unset, so a clone pointed at another hooks directory — where the kit's
+  gate runs only if a hook there calls it — reported as healthy.
 - **A test suite**, under `tests/`, run with `python -m pytest`. Every check the document gate
   makes has a test that plants the defect in a copy of the kit and asserts the finding it must
   produce, so each check is seen to fire rather than assumed to; the installers and the deny rules

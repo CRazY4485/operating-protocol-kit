@@ -91,6 +91,21 @@ def memory_bank_report(root: Path) -> list[str]:
     return lines
 
 
+def hooks_path_report(root: Path) -> str:
+    """core.hooksPath, flagged unless it is the directory the kit's gate lives in."""
+    configured = git(root, "config", "core.hooksPath")
+    if not configured:
+        return "NOT SET - the pre-commit gate will not run"
+    try:
+        is_kits = (root / configured).resolve() == (root / ".githooks").resolve()
+    except OSError:
+        is_kits = False
+    if is_kits:
+        return configured
+    return (f"{configured} - NOT .githooks, so the kit's pre-commit gate runs only if a hook "
+            "there calls it")
+
+
 def plan_report(root: Path) -> list[str]:
     text = read(root / "memory-bank" / "activeContext.md")
     if not text:
@@ -143,8 +158,8 @@ def main() -> int:
     if (root / ".git").exists():
         head = git(root, "log", "-1", "--oneline") or "no commits yet"
         dirty = [line for line in git(root, "status", "--porcelain").split("\n") if line]
-        hooks_path = git(root, "config", "core.hooksPath") or "NOT SET - the pre-commit gate will not run"
-        lines.append(f"git: HEAD {head}; {len(dirty)} uncommitted change(s); core.hooksPath {hooks_path}")
+        lines.append(f"git: HEAD {head}; {len(dirty)} uncommitted change(s); "
+                     f"core.hooksPath {hooks_path_report(root)}")
     else:
         lines.append("git: not a repository - the checkpoint and gate model cannot work")
 

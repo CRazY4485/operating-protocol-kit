@@ -1,0 +1,27 @@
+# The document gate, run by GitHub rather than by any one clone.
+#
+# .githooks/pre-commit refuses a commit only in a clone that has run
+# `git config core.hooksPath .githooks`, and the Claude Code hook fails open.
+# This job runs the same gate on every push and pull request, so a change made
+# in a clone that skipped the setup is still checked. Make it a required status
+# check in the branch protection rules to keep a failing change out of the
+# default branch.
+name: Document gate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      - name: Run the document gate
+        run: python .claude/tools/check-docs.py

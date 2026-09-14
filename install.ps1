@@ -99,7 +99,8 @@ function Copy-One {
 # The copy set is whatever git tracks in the kit, minus the files that describe
 # the kit itself. Deriving it from git means .gitignore is the single source of
 # truth: build output, caches and logs can never be copied into a project.
-$kitOnly = @("README.md", "CHANGELOG.md", "install.sh", "install.ps1", "LICENSE", ".gitignore")
+$kitOnly = @("README.md", "CHANGELOG.md", "install.sh", "install.ps1", "LICENSE", ".gitignore",
+    ".github/workflows/kit-tests.yml")
 foreach ($tracked in (git -C $kit ls-files)) {
     if ($kitOnly -contains $tracked) { continue }
     if ($tracked -like "tests/*") { continue }  # the kit's own test suite

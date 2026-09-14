@@ -104,14 +104,28 @@ def test_fresh_install_names_the_proven_interpreter(installer: str, project: Pat
     assert commands == {proven_interpreter(result)}
 
 
+KIT_ONLY = ["README.md", "CHANGELOG.md", "install.sh", "install.ps1", "tests",
+            ".github/workflows/kit-tests.yml"]
+
+
 @pytest.mark.parametrize("installer", INSTALLERS)
-def test_does_not_copy_the_kits_own_tests(installer: str, project: Path) -> None:
-    assert "tests/test_install.py" in git(KIT, "ls-files"), "stage tests/ so this test means something"
+def test_copies_nothing_that_belongs_to_the_kit_alone(installer: str, project: Path) -> None:
+    tracked = git(KIT, "ls-files")
+    for relative in ("tests/test_install.py", ".github/workflows/kit-tests.yml"):
+        assert relative in tracked, f"stage {relative} so this test means something"
 
     result = run_installer(installer, project)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert not (project / "tests").exists()
+    assert [relative for relative in KIT_ONLY if (project / relative).exists()] == []
+
+
+@pytest.mark.parametrize("installer", INSTALLERS)
+def test_copies_the_document_gate_workflow(installer: str, project: Path) -> None:
+    result = run_installer(installer, project)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (project / ".github" / "workflows" / "document-gate.yml").is_file()
 
 
 def test_both_installers_prove_the_same_interpreter(tmp_path: Path) -> None:

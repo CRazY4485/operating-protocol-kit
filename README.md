@@ -7,7 +7,8 @@ repository unchanged and configured per project through `memory-bank/techContext
 Version: see `.claude/KIT_VERSION`. Changes: see `CHANGELOG.md`.
 
 `README.md`, `CHANGELOG.md`, `install.sh` and `install.ps1` describe the kit itself and stay
-with it. Everything else is copied into the project.
+with it, as do its test suite, `tests/`, and the workflow that runs it,
+`.github/workflows/kit-tests.yml`. Everything else is copied into the project.
 
 ## What each file is, and when it is read
 
@@ -24,6 +25,7 @@ with it. Everything else is copied into the project.
 | `.claude/settings.json` | Enforced by the client, not read | Denied commands and paths, and the hooks |
 | `.claude/KIT_VERSION` | At bootstrap, and at session start | The version of the document set in force |
 | `.githooks/pre-commit` | Enforced by git on every commit | The document gate, as the layer that fails closed |
+| `.github/workflows/document-gate.yml` | Run by GitHub on every push and pull request | The document gate, for a clone that never enabled the hook |
 | `.claude/hooks/session-start.py` | Every session start, `/clear` included | The state report a fresh session opens with |
 | `memory-bank/` | Tiered, per task | Project state — created at bootstrap, not shipped with the kit |
 
@@ -44,9 +46,9 @@ kit's version beside it as `<name>.kit-new` for you to merge:
 
 To do it by hand instead:
 
-1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `.githooks/`, `.gitattributes` and `.editorconfig` into
-   the repository root. `README.md` and `CHANGELOG.md` describe the kit itself and stay with it;
-   they are not copied. Do not copy `memory-bank/` either — bootstrap creates it, and its absence
+1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `.githooks/`, `.github/workflows/document-gate.yml`,
+   `.gitattributes` and `.editorconfig` into the repository root. `README.md` and `CHANGELOG.md`
+   describe the kit itself and stay with it; they are not copied. Do not copy `memory-bank/` either — bootstrap creates it, and its absence
    is what marks a project as pre-implementation.
    `.gitignore` is the one file that is neither purely the kit's nor purely the project's: it stays
    with the kit *and* goes into the project, and it is **merged, never replaced**. Append the kit's
@@ -107,8 +109,8 @@ the spellings it names, and `Bash` and `PowerShell` are separate prefixes needin
 That is why `rm` and `git clean` are denied outright rather than flag by flag, why the force flags
 of `git push` and the `--hard` of `git reset` are matched wherever they stand in the command, and
 why every destructive git rule is written twice. `tests/test_settings.py` lists the spellings each
-rule must catch and the everyday commands it must not. It is also why they stop at the tool boundary — a permission rule governs what
-Claude runs, not what a script Claude ran goes on to do. For enforcement below that line, Anthropic
+rule must catch and the everyday commands it must not. It is also why they stop at the tool
+boundary — a permission rule governs what Claude runs, not what a script Claude ran goes on to do. For enforcement below that line, Anthropic
 points at [sandboxing](https://code.claude.com/docs/en/sandboxing), which is an OS-level boundary
 and outside this kit's scope.
 
@@ -118,7 +120,10 @@ reaches its timeout as a **non-blocking** error, and the tool call proceeds. A `
 therefore fails open and cannot be the last line of defence. Git behaves the other way: any
 non-zero exit from `.githooks/pre-commit` refuses the commit. So the document gate runs in both
 places — in Claude Code for fast feedback, and in git as the check that actually holds, including
-when Python is absent, and including for commits nobody asked Claude to make.
+when Python is absent, and including for commits nobody asked Claude to make. Git runs that hook
+only in a clone told to, so `.github/workflows/document-gate.yml` runs the gate once more on every
+push and pull request; made a required status check, it keeps a failing change out of the default
+branch whatever the clone it came from was configured to do.
 
 **Continuity is a file, or it is nothing.** This project's session boundary is `/clear`, which
 starts a new conversation. Anthropic's documentation lists what a *compaction* re-injects from

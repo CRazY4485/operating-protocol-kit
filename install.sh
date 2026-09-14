@@ -82,7 +82,7 @@ copy_one() {
 git -C "$KIT" ls-files | while IFS= read -r tracked; do
     case "$tracked" in
         README.md|CHANGELOG.md|install.sh|install.ps1|LICENSE) continue ;;
-        tests/*) continue ;;  # the kit's own test suite
+        tests/*|.github/workflows/kit-tests.yml) continue ;;  # the kit's own test suite
         .gitignore) continue ;;  # merged below, never replaced
     esac
     copy_one "$tracked"
