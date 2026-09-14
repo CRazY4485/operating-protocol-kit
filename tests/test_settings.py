@@ -147,6 +147,51 @@ def test_everyday_git_command_does_not_ask(command: str) -> None:
     assert not denies(command)
 
 
+def gate_hook_conditions(tool: str) -> list[str]:
+    """The `if` rule of every PreToolUse hook that runs the document gate, for `tool`."""
+    config = json.loads((KIT / SETTINGS).read_text(encoding="utf-8"))
+    bodies = []
+    for group in config["hooks"]["PreToolUse"]:
+        for hook in group["hooks"]:
+            match = RULE.match(hook.get("if", ""))
+            runs_gate = any("check-docs.py" in argument for argument in hook.get("args", []))
+            if match and match.group(1) == tool and runs_gate:
+                bodies.append(match.group(2))
+    return bodies
+
+
+def triggers_gate(command: str) -> bool:
+    return any(matches(body, command) for body in gate_hook_conditions("Bash"))
+
+
+# The PreToolUse run of the gate is the fast signal; .githooks/pre-commit is
+# the gate. The signal should still reach the spellings Claude itself writes.
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git commit -m change",
+        "git commit",
+        "git -C . commit -m change",
+        "git -c core.quotepath=off commit -m change",
+        "git --no-pager commit -m change",
+    ],
+)
+def test_a_commit_runs_the_gate_first(command: str) -> None:
+    assert triggers_gate(command)
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["git status", "git log --oneline", "git add -A", "git commit-tree HEAD^{tree}"],
+)
+def test_other_git_commands_do_not_run_the_gate(command: str) -> None:
+    assert not triggers_gate(command)
+
+
+def test_the_gate_hook_has_the_same_conditions_for_both_tools() -> None:
+    assert sorted(gate_hook_conditions("Bash")) == sorted(gate_hook_conditions("PowerShell"))
+
+
 @pytest.mark.parametrize("kind", ["deny", "ask"])
 def test_every_git_rule_has_a_powershell_twin(kind: str) -> None:
     # Bash and PowerShell are separate permission prefixes, so a git rule

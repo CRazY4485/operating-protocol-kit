@@ -96,7 +96,33 @@
           },
           {
             "type": "command",
+            "if": "Bash(git * commit *)",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/tools/check-docs.py",
+              "--root",
+              "${CLAUDE_PROJECT_DIR}",
+              "--hook"
+            ],
+            "timeout": 60,
+            "statusMessage": "Running the document gate before commit..."
+          },
+          {
+            "type": "command",
             "if": "PowerShell(git commit *)",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/tools/check-docs.py",
+              "--root",
+              "${CLAUDE_PROJECT_DIR}",
+              "--hook"
+            ],
+            "timeout": 60,
+            "statusMessage": "Running the document gate before commit..."
+          },
+          {
+            "type": "command",
+            "if": "PowerShell(git * commit *)",
             "command": "python3",
             "args": [
               "${CLAUDE_PROJECT_DIR}/.claude/tools/check-docs.py",

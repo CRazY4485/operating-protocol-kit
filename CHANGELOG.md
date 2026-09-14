@@ -45,6 +45,13 @@ the voice of deliverables, which it never did.
   `git push *--force*`, `git push -f*`, `git push * -f*` and `git push *+*`, and
   `git reset --hard *` is `git reset *--hard*`. Every git rule keeps its `PowerShell` twin.
 - **`find … -delete`, `truncate` and `shred` are denied** for `Bash`, beside `rm`.
+- **The `PreToolUse` run of the gate reaches `git -C <dir> commit` and its kin.** Its handlers
+  matched `git commit *` only, so `git -C <dir> commit`, `git -c … commit` and
+  `git --no-pager commit` — spellings Claude writes itself — skipped the fast signal, as the live
+  test of this release showed; git's own `pre-commit` still refused them. Each tool now has a
+  second handler on `git * commit *`, and a table in `tests/test_settings.py` holds which commands
+  run the gate and which do not. A command such as `git log --grep commit x` runs it too, which
+  stops that command only when the documents already fail the gate.
 - **Commands that discard uncommitted work ask first.** `git restore`, `git checkout -- <path>`,
   `git checkout .`, `git checkout -f`, `git switch -f` and `--discard-changes`, `git stash drop`
   and `clear`, and `git branch -D` were neither denied nor asked about, though each can destroy
@@ -206,8 +213,8 @@ New files, copied as they are: `.claude/tools/kit_config.py`, which `check-docs.
 
 Merge:
 
-- `.claude/settings.json` — take the kit's `permissions.deny` and `permissions.ask` lists whole,
-  and keep the project's own hooks. Keep the hook `command` the installer wrote into the
+- `.claude/settings.json` — take the kit's `permissions.deny` and `permissions.ask` lists and its
+  `PreToolUse` handlers whole, and keep the project's own hooks. Keep the hook `command` the installer wrote into the
   `.kit-new`, which is the interpreter it proved on this machine.
 - `CLAUDE.md` — *Quality gates*: the one gate command is `run-gates.py`, its log comes with a
   hash, what the document gate checks is listed at the top of `check-docs.py`, and a language
