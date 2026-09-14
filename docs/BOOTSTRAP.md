@@ -27,7 +27,8 @@ output; an unknown is asked, never assumed.
    they are asked in order where one shapes another (see `CLAUDE.md`, *Asking questions*).
 3. **Install the documents, then prove they load.** Place the Constitution, this file, and
    `decision-format.md` in `docs/`; install a rule file in `.claude/rules/` for each language in
-   use, plus `markdown.md`. Then verify loading with evidence, not assumption:
+   use, plus `markdown.md`, writing one from `docs/templates/language-rules.md` for a language the
+   kit does not ship. Then verify loading with evidence, not assumption:
    - Run `/context` and confirm each file appears under **Memory files**.
    - Read `logs/instructions-loaded.log`, written by the `InstructionsLoaded` hook, and confirm the
      rule files appear there with their load reason. A path-scoped rule loads when a matching file

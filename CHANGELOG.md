@@ -5,6 +5,10 @@ project may already be relying on, a **minor** bump adds a rule or a document, a
 clarifies wording without changing what is required. The version in effect on a project is
 recorded in its `memory-bank/techContext.md` at bootstrap.
 
+Each release from 4.0.0 on ends with an *Upgrading* section: the installed files it changes, and
+anything a project must do beyond merging them. Re-running an installer on a project writes each
+changed file beside the project's copy as `<name>.kit-new`; that section says what to merge.
+
 ## Unreleased
 
 Fixes from the enforcement audit in issue #3, together with four defects found while checking it.
@@ -81,11 +85,41 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
 - **The `SessionStart` report flags a `core.hooksPath` that is not `.githooks`.** It flagged the
   setting only when it was unset, so a clone pointed at another hooks directory — where the kit's
   gate runs only if a hook there calls it — reported as healthy.
+- **`docs/templates/language-rules.md`**, the skeleton for a language the kit ships no rule file
+  for: naming table, structure, errors, security, gate and pass condition, and testing, including
+  the reachable equivalent where the language has no test runner. It lives in `docs/templates/`
+  rather than `.claude/rules/`, because Claude Code loads every Markdown file there as a rule. A
+  rule file written from it is gated like the shipped ones, under a default budget of 2 000 words;
+  before, the gate read only the rule files it named, so an added language's file was never
+  checked at all.
 - **A test suite**, under `tests/`, run with `python -m pytest`. Every check the document gate
   makes has a test that plants the defect in a copy of the kit and asserts the finding it must
   produce, so each check is seen to fire rather than assumed to; the installers and the deny rules
   are covered too. The suite belongs to the kit's own repository and is never copied into a
   project.
+
+### Upgrading
+
+Replace outright — a project has no reason to have edited them: `.claude/tools/check-docs.py`,
+`.claude/hooks/session-start.py`, `.claude/rules/markdown.md`, `docs/templates/activeContext.md`
+and `docs/templates/superseded.md`. New files, copied as they are:
+`docs/templates/language-rules.md` and `.github/workflows/document-gate.yml`.
+
+Merge:
+
+- `.claude/settings.json` — take the kit's `permissions.deny` list whole, and keep the project's
+  own hooks. Keep the hook `command` the installer wrote into the `.kit-new`, which is the
+  interpreter it proved on this machine.
+- `CLAUDE.md` — one sentence in *Quality gates*: the gate checks `.claude/settings.json`, not voice.
+- `docs/BOOTSTRAP.md` — steps 3 and 10.
+
+Then, beyond the merge:
+
+- A `memory-bank/activeContext.md` made from the 3.x template still carries that template's
+  preamble, about half of its 400-word budget. Replace the preamble with the two comments of the
+  new template, and keep the `<!-- plan -->` anchor where it is.
+- On GitHub, make the job in `.github/workflows/document-gate.yml` a required status check.
+- Delete each `.kit-new` once merged; the gate warns about every one still present.
 
 ## 3.0.1 — 2026-09-07
 

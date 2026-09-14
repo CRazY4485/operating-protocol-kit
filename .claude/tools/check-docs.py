@@ -7,8 +7,9 @@ rules do not depend on anyone's attention. See CLAUDE.md, *Quality gates*.
 Checks performed:
   1. Encoding and shape  - UTF-8 decodable, LF-only, no trailing whitespace,
      wrap limit per file class. Covers every template in docs/templates/.
-  2. Document budgets    - words and (for CLAUDE.md) lines, per the table below,
-     and no Tier 1 template over the budget of the file bootstrap makes of it.
+  2. Document budgets    - words and (for CLAUDE.md) lines, per the table below;
+     a rule file the kit does not ship gets DEFAULT_RULE_BUDGET; and no Tier 1
+     template is over the budget of the file bootstrap makes of it.
   3. Cross-references    - every *Section Name* reference resolves to a real
      heading or bold label somewhere in the document set.
   4. Referenced paths    - a Markdown link target, resolved against the linking
@@ -79,6 +80,12 @@ BUDGETS: dict[str, dict[str, int | None]] = {
     ".claude/rules/dotnet.md": {"words": 2600, "lines": None, "wrap": WRAP_LIMIT},
     ".claude/rules/mql5.md": {"words": 2600, "lines": None, "wrap": WRAP_LIMIT},
 }
+
+# A rule file for a language the kit does not ship - written from
+# docs/templates/language-rules.md - is gated like the shipped ones, under this
+# budget: with CLAUDE.md's 4 400 words it keeps the pair under 6 500.
+RULES = ".claude/rules"
+DEFAULT_RULE_BUDGET: dict[str, int | None] = {"words": 2000, "lines": None, "wrap": WRAP_LIMIT}
 
 # Language rule files are installed per project: a project that uses no MQL5
 # deletes mql5.md, and that is a correct install rather than a missing document.
@@ -500,6 +507,16 @@ def main() -> int:
         if lines is not None:
             documents[relative] = lines
 
+    budgets = dict(BUDGETS)
+    for path in sorted((root / RULES).glob("*.md")):
+        relative = path.relative_to(root).as_posix()
+        if relative in budgets:
+            continue
+        budgets[relative] = DEFAULT_RULE_BUDGET
+        lines = check_shape(relative, path.read_bytes(), WRAP_LIMIT)
+        if lines is not None:
+            documents[relative] = lines
+
     for extra in ("README.md", "CHANGELOG.md"):
         path = root / extra
         if path.exists():
@@ -517,8 +534,8 @@ def main() -> int:
     anchors = collect_anchors(documents)
     corpus = collect_repository_files(root)
     for relative, lines in documents.items():
-        if relative in BUDGETS:
-            check_budget(relative, lines, BUDGETS[relative])
+        if relative in budgets:
+            check_budget(relative, lines, budgets[relative])
         check_references(relative, lines, anchors)
         # CHANGELOG.md is exempt: it records the paths that were in force at each
         # release, and a path that has since moved is correct history there.

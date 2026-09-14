@@ -20,7 +20,7 @@ with it, as do its test suite, `tests/`, and the workflow that runs it,
 | `.claude/rules/markdown.md` | When a Markdown file is touched | Authored-document voice and Markdown mechanics |
 | `docs/BOOTSTRAP.md` | Once, when implementation begins | One-time project setup, step by step |
 | `docs/decision-format.md` | When a decision record is written | What earns a record, and its structure |
-| `docs/templates/` | At bootstrap, and per delegation | Starting files for the decision index and sub-agent briefs |
+| `docs/templates/` | At bootstrap, per delegation, and per new language | Starting files for the Memory Bank, sub-agent briefs, and a new language's rule file |
 | `.claude/tools/check-docs.py` | Every gate run, and before every commit | The gate for these documents |
 | `.claude/settings.json` | Enforced by the client, not read | Denied commands and paths, and the hooks |
 | `.claude/KIT_VERSION` | At bootstrap, and at session start | The version of the document set in force |
@@ -48,15 +48,16 @@ To do it by hand instead:
 
 1. Copy `CLAUDE.md`, `docs/`, `.claude/`, `.githooks/`, `.github/workflows/document-gate.yml`,
    `.gitattributes` and `.editorconfig` into the repository root. `README.md` and `CHANGELOG.md`
-   describe the kit itself and stay with it; they are not copied. Do not copy `memory-bank/` either — bootstrap creates it, and its absence
-   is what marks a project as pre-implementation.
+   describe the kit itself and stay with it; they are not copied. Do not copy `memory-bank/`
+   either — bootstrap creates it, and its absence is what marks a project as pre-implementation.
    `.gitignore` is the one file that is neither purely the kit's nor purely the project's: it stays
    with the kit *and* goes into the project, and it is **merged, never replaced**. Append the kit's
    `.gitignore` under a `# --- operating-protocol kit ---` marker line, keeping the project's own
    rules above it. `install.sh` and `install.ps1` do exactly this, and skip the append when the
    marker is already there.
 2. Delete the *language* rule files the project does not use — `python.md`, `dotnet.md`, `mql5.md`.
-   A language in use with no rule file is a blocker, not a gap to fill later. `markdown.md` is not
+   A language in use with no rule file is a blocker, not a gap to fill later;
+   `docs/templates/language-rules.md` is the skeleton for writing one. `markdown.md` is not
    in that set and is never deleted: the kit's own governed documents are Markdown, so the gate
    treats it as required.
 
@@ -110,8 +111,9 @@ That is why `rm` and `git clean` are denied outright rather than flag by flag, w
 of `git push` and the `--hard` of `git reset` are matched wherever they stand in the command, and
 why every destructive git rule is written twice. `tests/test_settings.py` lists the spellings each
 rule must catch and the everyday commands it must not. It is also why they stop at the tool
-boundary — a permission rule governs what Claude runs, not what a script Claude ran goes on to do. For enforcement below that line, Anthropic
-points at [sandboxing](https://code.claude.com/docs/en/sandboxing), which is an OS-level boundary
+boundary — a permission rule governs what Claude runs, not what a script Claude ran goes on to do.
+For enforcement below that line, Anthropic points at
+[sandboxing](https://code.claude.com/docs/en/sandboxing), which is an OS-level boundary
 and outside this kit's scope.
 
 That configuration has one limit worth stating plainly, because it decides where the gate lives.
@@ -151,7 +153,9 @@ record the owner is meant to audit.
   and Linux. The document gate warns whenever the named interpreter does not start Python 3.9+ on
   the machine the gate runs on, so a team spanning operating systems sees the mismatch instead of
   losing its hooks silently.
-- Claude Code recent enough to support `.claude/rules/` with `paths:` frontmatter and the
-  `InstructionsLoaded` hook. The `/context` step above is the check; if rules do not load, move their content
-  into directory-scoped `CLAUDE.md` files beside the code they govern and record which mechanism
-  is in use in `techContext.md`.
+- Claude Code recent enough to support `.claude/rules/` with `paths:` frontmatter, the
+  `InstructionsLoaded` hook, and two fields on a hook entry: `args`, which runs `command` directly
+  with no shell, and `if`, which filters a tool event by permission-rule syntax. All are in the
+  [hooks reference](https://code.claude.com/docs/en/hooks). The `/context` step above is the
+  check; if rules do not load, move their content into directory-scoped `CLAUDE.md` files beside
+  the code they govern and record which mechanism is in use in `techContext.md`.

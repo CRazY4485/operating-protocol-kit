@@ -466,6 +466,32 @@ def test_rejects_a_missing_required_document(kit_tree: Path) -> None:
     assert "ERROR docs/decision-format.md: governed document is missing" in run.output
 
 
+def test_gates_a_rule_file_the_kit_does_not_ship(kit_tree: Path) -> None:
+    write(kit_tree, ".claude/rules/go.md", "# Go Rules\r\n")
+
+    assert "ERROR .claude/rules/go.md: contains CRLF" in run_gate(kit_tree).output
+
+
+def test_holds_an_added_rule_file_to_the_default_budget(kit_tree: Path) -> None:
+    budget = GATE.DEFAULT_RULE_BUDGET["words"]
+    text = "# Go Rules\n\n" + filler(budget)
+    write(kit_tree, ".claude/rules/go.md", text)
+
+    run = run_gate(kit_tree)
+
+    words = len(text.split())
+    assert f"ERROR .claude/rules/go.md: {words} words exceeds the budget of {budget}" in run.output
+
+
+def test_the_language_rules_template_is_a_valid_start(kit_tree: Path) -> None:
+    template = kit_tree / "docs/templates/language-rules.md"
+    (kit_tree / ".claude/rules/go.md").write_bytes(template.read_bytes())
+
+    run = run_gate(kit_tree)
+
+    assert (run.errors, run.warnings) == (0, 0), run.output
+
+
 def test_a_language_rule_file_is_optional(kit_tree: Path) -> None:
     (kit_tree / ".claude/rules/mql5.md").unlink()
 
