@@ -5,6 +5,240 @@ project may already be relying on, a **minor** bump adds a rule or a document, a
 clarifies wording without changing what is required. The version in effect on a project is
 recorded in its `memory-bank/techContext.md` at bootstrap.
 
+Each release from 4.0.0 on ends with an *Upgrading* section: the installed files it changes, and
+anything a project must do beyond merging them. Re-running an installer on a project writes each
+changed file beside the project's copy as `<name>.kit-new`, and copies the *Upgrading* section of
+every release newer than the project's into `.claude/KIT_UPGRADE.md`, since this file stays with
+the kit.
+
+## 4.0.0 — 2026-09-15
+
+Fixes from the enforcement audit in issue #3, and the defects found while checking it. It is a
+major bump because four changes alter what a project may already rely on: `git clean` is denied
+outright and force flags are denied in any position; the one gate command is now
+`.claude/tools/run-gates.py`, reading the project's `.claude/gates.json`, and a bootstrapped
+project without that file fails the gate run; Tier 1 budgets are tuned in
+`memory-bank/budgets.json` rather than `techContext.md`; and the gate no longer claims to check
+the voice of deliverables, which it never did.
+
+### Fixed
+
+- **The installers no longer rewrite a project's own hooks.** Both installers set the hook
+  interpreter by rewriting `command` in every hook that had `args`, and they did it in the
+  project's existing `.claude/settings.json` as well as in the `.kit-new` beside it. A project
+  hook such as `node format.js` became `python3 format.js`, which Claude Code cannot run and so
+  skips without a word. That contradicted the installers' own promise that nothing existing is
+  destroyed. They now write the interpreter only into a file the same run wrote: a
+  `settings.json` copied into a project that had none, or the `.kit-new`.
+- **Both installers try `python3` first.** `install.ps1` tried `py` first, so a Windows install
+  wrote `py` into a settings file that is committed and shared, and a teammate on macOS or Linux
+  then had no working hooks. `python3` is the only candidate name that exists on all three
+  systems. Both installers now probe `python3`, `python`, `py` in the order `.githooks/pre-commit`
+  always has, and print a note whenever they write a name other than `python3`.
+- **`git clean` is denied outright, and force flags are matched in any position.** 3.0.0 turned
+  `git clean -f*` into `git clean -f *`. Under Claude Code's documented wildcard rules the space
+  is part of the rule, so `git clean -fdx` — the most common destructive spelling — stopped
+  matching, and `-df` and `-xdf` never had. Enumerating flags cannot be complete, which is the
+  reason 3.0.0 gave for denying `rm` outright, so `git clean` now gets the same treatment. The
+  push rules matched only a force flag written straight after `push`: `git push origin main
+  --force`, `git push origin main -f` and a `+main` refspec all passed. They are now
+  `git push *--force*`, `git push -f*`, `git push * -f*` and `git push *+*`, and
+  `git reset --hard *` is `git reset *--hard*`. Every git rule keeps its `PowerShell` twin.
+- **`find … -delete`, `truncate` and `shred` are denied** for `Bash`, beside `rm`.
+- **The `PreToolUse` run of the gate reaches `git -C <dir> commit` and its kin.** Its handlers
+  matched `git commit *` only, so `git -C <dir> commit`, `git -c … commit` and
+  `git --no-pager commit` — spellings Claude writes itself — skipped the fast signal, as the live
+  test of this release showed; git's own `pre-commit` still refused them. Each tool now has a
+  second handler on `git * commit *`, and a table in `tests/test_settings.py` holds which commands
+  run the gate and which do not. A command such as `git log --grep commit x` runs it too, which
+  stops that command only when the documents already fail the gate.
+- **Commands that discard uncommitted work ask first.** `git restore`, `git checkout -- <path>`,
+  `git checkout .`, `git checkout -f`, `git switch -f` and `--discard-changes`, `git stash drop`
+  and `clear`, and `git branch -D` were neither denied nor asked about, though each can destroy
+  work git never saw. They have everyday uses too, so they are `ask` rules rather than `deny`:
+  Claude Code stops for the owner before each. A path checked out without `--` cannot be told
+  from a branch switch by a pattern and stays uncovered.
+- **The first-person check is removed, because it never ran.** It skipped every rule document and
+  every path under `.claude/rules/`, and those were the only documents the gate loaded, so it
+  returned before its first comparison on every run while `.claude/rules/markdown.md` said the
+  gate "greps for these phrases". It is removed rather than aimed at the deliverables: they are
+  written in the working language, and an English phrase list would pass nearly all of them. Its
+  place in `memory-bank/` is taken by a phrase list the project keeps in its own working language;
+  see *Added*. Elsewhere the rule is held by review against the checkable test in `markdown.md`,
+  and neither that file nor `CLAUDE.md` claims otherwise.
+- **A commit the `PreToolUse` hook blocks now tells Claude why.** On exit 2 Claude Code gives
+  Claude the hook's stderr as the reason, and the gate printed its findings to stdout, so Claude
+  saw a refused commit and nothing else. With `--hook` the findings now go to stderr.
+- **A Markdown link resolves against the directory of the document it is in**, as GitHub and
+  every editor resolve it. The gate resolved every link from the repository root, so a correct
+  link from `docs/` to a sibling was reported as incomplete, and the path the report suggested
+  would have been a broken link. A link that leaves the repository is now an error of its own.
+- **`docs/templates/activeContext.md` fits the budget of the file it becomes.** At 433 words it
+  was over the 400-word Tier 1 budget of `memory-bank/activeContext.md`, so every project started
+  over budget the moment step 5 of `BOOTSTRAP.md` copied it. It is 239 words now: the rationale it
+  repeated from `CLAUDE.md` is referenced instead, and the instructions `CLAUDE.md` does not carry
+  — keep both anchors through translation, and put nothing but the plan beneath the plan anchor —
+  sit in two short comments.
+- **A reference in `docs/templates/superseded.md` resolved to nothing.** It named the
+  "Alternatives rejected" section, a heading that exists only inside the example record in a
+  code block; it now points at *Structure of a record*. The gate found it the first time it read
+  the templates.
+
+- **A project can set its Tier 1 budgets, as `CLAUDE.md` always said it could.** `CLAUDE.md`
+  said the budgets were "tuned per project in `techContext.md`", but nothing read that file: the
+  figures were constants in `check-docs.py`, repeated a second time in `session-start.py`. A
+  project that raised a budget and recorded it was still warned against the old figure. The
+  figures now live once, in `.claude/tools/kit_config.py`, which both scripts read, and a project
+  sets its own in `memory-bank/budgets.json` — a JSON object from Tier 1 file to words. A file
+  that is not JSON, names a file that is not Tier 1, or gives anything but a positive whole number
+  is an error, and the starting figure stays in force for that file, so a typo can never lift a
+  budget silently.
+
+### Changed
+
+- **`.claude/rules/markdown.md` holds writing rules and nothing else.** It carried a `## Gate`
+  section — the document gate's checks, and its two enforcement layers — plus clauses naming the
+  tool behind individual rules, and an opening sentence on how rule files load. The layers
+  repeated `CLAUDE.md`, *Quality gates*, and the loading sentence repeated *Session hygiene*; the
+  list of checks belongs beside the checks, at the top of `check-docs.py`, where `CLAUDE.md` now
+  points. The file loads whenever a Markdown file is read, in practice every task, so each of the
+  261 words it lost was context paid on every one. It is 655 words now, and a test keeps the kit's
+  machinery out of it.
+- **The language rule files and their skeleton drop the kit's machinery too.** Each opened with
+  how rule files load and how step 3 of `BOOTSTRAP.md` proves it — the first half is in *Session
+  hygiene*, the second in step 3 itself — and `python.md` and `mql5.md` named `.claude/gates.json`
+  as the place their gate is listed. They now state what the language's gate must contain and
+  leave where it is listed to the gate runner. The same test covers every rule file and the
+  skeleton.
+
+### Added
+
+- **`.claude/tools/run-gates.py`, the one gate command.** `CLAUDE.md` said one command runs every
+  gate and appends its output to `logs/gate-<UTC timestamp>.log`, but the kit shipped no such
+  command, so the mechanism every claim of evidence rests on was rebuilt by hand in each project.
+  The runner runs the document gate, then each gate in `.claude/gates.json` that applies to this
+  operating system, from the repository root and with no shell. It streams everything to the
+  screen and to one log, and prints the log's path and SHA-256, so a report can cite a hash that
+  shows the log is the one the run wrote. It fails on any gate that fails, times out or cannot
+  start; on a gate list it cannot use, running none of it; and on a bootstrapped project with no
+  gate list, since a runtime with no recorded gate is a blocker. `.claude/gates.json` belongs to
+  the project: step 6 of `BOOTSTRAP.md` creates it from `docs/templates/gates.json`, and the
+  document gate refuses a malformed one at commit rather than at the next run.
+- **The Memory Bank is checked for opinion and narration, in the working language.**
+  `memory-bank/` records facts, and an opinion written there as one ("I think…", "məncə…") is
+  read by every later session as settled. The project lists the phrases that mark one in
+  `memory-bank/voice.json`, copied at bootstrap from `docs/templates/voice.json`, which starts
+  with English and Azerbaijani phrases. The gate warns on each it finds, with file and line, outside
+  code blocks and only as whole words. Only explicit markers are listed: Azerbaijani marks the
+  first person mostly with a verb suffix, and matching suffixes would flag possessives too. It is a
+  warning, not an error, because a phrase list cannot tell a quotation from a claim. A missing
+  list is a warning of its own; `{"phrases": []}` declares that none are wanted.
+- **The last verified change must cite its evidence.** `CLAUDE.md` has the Record step name the
+  gate log behind a change, but nothing checked that it did, and a claim with no log is the kind
+  that corrupts a project's record fastest. `activeContext.md` now carries a `<!-- verified -->`
+  anchor under that heading, found through translation like the plan anchor. The gate warns when
+  the section cites no `logs/gate-…log` with a SHA-256, and fails when the cited log is on this
+  machine and its hash is not the one cited: the record then claims evidence the log does not
+  hold. Logs are git-ignored, so on another clone or in CI the citation is taken as written.
+- **The document gate checks `.claude/settings.json`.** A file that is not valid JSON is an
+  error: Claude Code ignores it, which drops every deny rule and hook at once. An interpreter
+  named by the Python hooks that does not start Python 3.9+ on the machine the gate runs on is a
+  warning — a warning rather than an error, because the file is shared and a name that is right
+  on one operating system can be missing on another. The gate runs in `.githooks/pre-commit`, so
+  the mismatch shows up on the first commit made on such a machine.
+- **The templates are gated.** Every `docs/templates/*.md` is checked for shape, references and
+  paths like the documents that name them; the four templates bootstrap and delegation copy must
+  exist; a Tier 1 template must fit the budget of the file bootstrap makes of it; and the
+  `activeContext.md` template must keep the `<!-- plan -->` anchor, with a test holding the gate's
+  pattern for it equal to the `SessionStart` hook's.
+- **Upgrade steps reach the project.** A project upgrading saw `KIT_VERSION MISMATCH` in its
+  state report and had nothing inside it that said what to do: the steps lived only in this file,
+  which stays with the kit. Run on a project with an older kit, the installers now copy the
+  *Upgrading* section of every newer release, oldest first, into `.claude/KIT_UPGRADE.md`; a
+  release before this convention is named with a pointer here instead. The document gate warns and
+  the `SessionStart` report says `UPGRADE PENDING` until the file is deleted, and notes already
+  pending are never overwritten. The work both installers share — this, and naming the hook
+  interpreter — now lives once, in the kit-only `install_support.py`, rather than as the same
+  Python embedded in two shells. A project upgrading from 3.x to 4.0.0 gets its notes this way.
+- **The commit gate judges the commit being made.** `.githooks/pre-commit` ran the document gate
+  over the working tree, and git commits the index. A defect staged and then tidied away in the
+  working tree passed the gate and entered the history, and a decision record left untracked
+  while its index row was staged let a commit index a file it did not contain. The hook now asks
+  the gate which paths it reads (`check-docs.py --inputs`) and refuses the commit while any of
+  them has unstaged changes or is untracked, naming each one and the way out: stage it, or set it
+  aside with `git stash push --keep-index --include-untracked`. The kit's own checkpoint,
+  `git add -A && git commit`, never meets the refusal, and neither does a partial commit of files
+  the gate does not read. Found by the live test of this release in a real Claude Code session.
+- **`install.ps1` works when PowerShell 7 starts it.** Windows PowerShell 5.1 started from
+  PowerShell 7 — every step on a GitHub Windows runner, or `powershell -File` typed in a
+  PowerShell 7 terminal — inherits a module path it cannot load `Get-FileHash` from, and the
+  install stopped at the first file the project already had. The installer now hashes with .NET,
+  which is always there.
+- **Unmerged kit files are reported.** A `*.kit-new` an installer left beside a file is a warning
+  naming the file to merge it into. It was an untracked file that `git add -A` would commit.
+- **`.github/workflows/document-gate.yml` runs the document gate on every pull request** and
+  every push to the default branch. `.githooks/pre-commit` binds only in a clone that ran
+  `git config core.hooksPath .githooks`, and nothing reported a clone that had not. The workflow
+  is copied into projects; made a required status check, which `BOOTSTRAP.md` step 10 now asks
+  the owner for, it holds the gate for every clone. `.github/workflows/kit-tests.yml` runs the
+  kit's own suite on Linux with Python 3.9 and the newest release, and on Windows, and stays with
+  the kit. Neither runs on a push to another branch, which its pull request already covers.
+- **The `SessionStart` report flags a `core.hooksPath` that is not `.githooks`.** It flagged the
+  setting only when it was unset, so a clone pointed at another hooks directory — where the kit's
+  gate runs only if a hook there calls it — reported as healthy.
+- **`docs/templates/language-rules.md`**, the skeleton for a language the kit ships no rule file
+  for: naming table, structure, errors, security, gate and pass condition, and testing, including
+  the reachable equivalent where the language has no test runner. It lives in `docs/templates/`
+  rather than `.claude/rules/`, because Claude Code loads every Markdown file there as a rule.
+  `CLAUDE.md` names it in the sentence that makes a language without a rule file a blocker: a new
+  language usually arrives after bootstrap, when `BOOTSTRAP.md` is no longer read. A
+  rule file written from it is gated like the shipped ones, under a default budget of 2 000 words;
+  before, the gate read only the rule files it named, so an added language's file was never
+  checked at all.
+- **A test suite**, under `tests/`, run with `python -m pytest`. Every check the document gate
+  makes has a test that plants the defect in a copy of the kit and asserts the finding it must
+  produce, so each check is seen to fire rather than assumed to; the installers and the deny rules
+  are covered too. The suite belongs to the kit's own repository and is never copied into a
+  project.
+
+### Upgrading
+
+Replace outright — a project has no reason to have edited them: `.claude/tools/check-docs.py`,
+`.claude/hooks/session-start.py`, `.claude/rules/markdown.md`, `.claude/rules/python.md`,
+`.claude/rules/dotnet.md`, `.claude/rules/mql5.md`, `.githooks/pre-commit`,
+`docs/templates/activeContext.md` and `docs/templates/superseded.md`.
+New files, copied as they are: `.claude/tools/kit_config.py`, which `check-docs.py` now needs,
+`.claude/tools/run-gates.py`, `docs/templates/gates.json`, `docs/templates/voice.json`,
+`docs/templates/language-rules.md` and `.github/workflows/document-gate.yml`.
+
+Merge:
+
+- `.claude/settings.json` — take the kit's `permissions.deny` and `permissions.ask` lists and its
+  `PreToolUse` handlers whole, and keep the project's own hooks. Keep the hook `command` the
+  installer wrote into the `.kit-new`, which is the interpreter it proved on this machine.
+- `CLAUDE.md` — *Quality gates*: the one gate command is `run-gates.py`, its log comes with a
+  hash, what the document gate checks is listed at the top of `check-docs.py`, and a language
+  without a rule file points at `docs/templates/language-rules.md`. *Memory Bank*: Tier 1 budgets
+  are tuned in `budgets.json`, not `techContext.md`.
+- `docs/BOOTSTRAP.md` — steps 3, 5, 6 and 10.
+
+Then, beyond the merge:
+
+- A `memory-bank/activeContext.md` made from the 3.x template still carries that template's
+  preamble, about half of its 400-word budget. Replace the preamble with the two comments of the
+  new template, and keep the `<!-- plan -->` anchor where it is. Put `<!-- verified -->` on the
+  line after the last-verified-change heading, and cite there the gate log of the last accepted
+  change with the SHA-256 `run-gates.py` printed for it; the gate warns until both are there.
+- Copy `docs/templates/voice.json` to `memory-bank/voice.json`, and extend it to the working
+  language if the list lacks it. Until it exists the gate warns that no phrases are checked.
+- The gate command a project recorded in `techContext.md` becomes an entry in
+  `.claude/gates.json`, started from `docs/templates/gates.json`; `techContext.md` then records
+  `python .claude/tools/run-gates.py` as the one gate command.
+- A Tier 1 budget the project raised in `techContext.md` moves to `memory-bank/budgets.json`,
+  for example `{"memory-bank/progress.md": 900}`; the gate never read the old place.
+- On GitHub, make the job in `.github/workflows/document-gate.yml` a required status check.
+- Delete each `.kit-new` once merged; the gate warns about every one still present.
+
 ## 3.0.1 — 2026-09-07
 
 A patch bump: it changes nothing a project is required to do, and fixes a defect that made the
@@ -231,9 +465,9 @@ git history, so a project could not tell which revision it had been given.
 ### Added
 
 - `README.md`, `.claude/KIT_VERSION`, `CHANGELOG.md`: entry point, version, and change history.
-- `.claude/tools/check-docs.py`: the gate for the governed documents — encoding and line shape, word and
-  line budgets, cross-reference resolution, Tier 1 completeness, decision-index integrity, the
-  first-person ban, and the presence of a version.
+- `.claude/tools/check-docs.py`: the gate for the governed documents — encoding and line shape,
+  word and line budgets, cross-reference resolution, Tier 1 completeness, decision-index
+  integrity, the first-person ban, and the presence of a version.
 - `.claude/settings.json`: denied destructive commands and secret-file reads, a `PreToolUse` hook
   that blocks a commit whose document gate fails, and an `InstructionsLoaded` hook that logs which
   instruction files actually loaded.

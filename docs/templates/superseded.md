@@ -9,7 +9,8 @@ the date of supersession. The record file itself stays where it is, with its sta
 `superseded by NNNN` — the only edit a record ever receives.
 
 Reading order: a superseded decision still explains why the current one exists. It is read when the
-successor's *Alternatives rejected* section points back to it.
+successor's "Alternatives rejected" section points back to it; see `docs/decision-format.md`,
+*Structure of a record*.
 
 | No. | Decision | Superseded by | Date (UTC) |
 |---|---|---|---|

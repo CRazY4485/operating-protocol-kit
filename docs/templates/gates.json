@@ -1,0 +1,14 @@
+{
+  "gates": [
+    {
+      "name": "python: format, lint, types, tests",
+      "command": ["python", "scripts/gate.py"]
+    },
+    {
+      "name": "dotnet: build and test",
+      "command": ["dotnet", "test", "--nologo"],
+      "os": ["win32"],
+      "timeout_seconds": 1800
+    }
+  ]
+}

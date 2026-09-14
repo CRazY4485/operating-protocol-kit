@@ -27,7 +27,8 @@ output; an unknown is asked, never assumed.
    they are asked in order where one shapes another (see `CLAUDE.md`, *Asking questions*).
 3. **Install the documents, then prove they load.** Place the Constitution, this file, and
    `decision-format.md` in `docs/`; install a rule file in `.claude/rules/` for each language in
-   use, plus `markdown.md`. Then verify loading with evidence, not assumption:
+   use, plus `markdown.md`, writing one from `docs/templates/language-rules.md` for a language the
+   kit does not ship. Then verify loading with evidence, not assumption:
    - Run `/context` and confirm each file appears under **Memory files**.
    - Read `logs/instructions-loaded.log`, written by the `InstructionsLoaded` hook, and confirm the
      rule files appear there with their load reason. A path-scoped rule loads when a matching file
@@ -50,18 +51,22 @@ output; an unknown is asked, never assumed.
    from the last: `projectbrief.md` distilled from the specification first, then
    `productContext.md`, `systemPatterns.md`, `techContext.md`, then `progress.md` and an empty
    `backlog.md`, and finally — copied from `docs/templates/` and translated — `activeContext.md`,
-   `decisions/decisions.md` and `decisions/superseded.md`. Confirm each with the owner: everything
-   downstream inherits errors made here, so accuracy beats speed. Record the value of
+   `decisions/decisions.md` and `decisions/superseded.md`, plus `voice.json`, extended to the
+   working language if it lacks it. Confirm each with the owner: everything downstream inherits
+   errors made here, so accuracy beats speed. Record the value of
    `.claude/KIT_VERSION` in `techContext.md`, so a later session can see whether the project is
    running an outdated document set. `techContext.md` is filled progressively through steps 6 to
    8 and confirmed complete at the end.
-6. **Build the verification command before building features.** One command per runtime runs that
-   language's full gate set — as its rule file defines it — plus the document gate
-   `python .claude/tools/check-docs.py`, and prints a clear pass or fail. It appends its full
-   output to `logs/gate-<UTC timestamp>.log`, so every later claim of mine points at a file the
-   owner can open rather than at a message they must trust. Record it in `techContext.md` for
-   every operating system in use, and confirm the owner can run it themselves and read the result
-   without help. This command comes before the first feature, not after it.
+6. **Build the verification command before building features.** Copy `docs/templates/gates.json`
+   to `.claude/gates.json` and list, for each runtime, the command that runs that language's full
+   gate set as its rule file defines it: an argument list, run from the repository root with no
+   shell, limited by `os` to the operating systems it runs on. `python .claude/tools/run-gates.py`
+   then runs the document gate and every listed gate, writes their full output to
+   `logs/gate-<UTC timestamp>.log` and prints that path with the log's SHA-256, so every later
+   claim of mine points at a file the owner can open rather than at a message they must trust.
+   Record in `techContext.md` that it is the one gate command, and confirm the owner can run it
+   themselves on every operating system in use and read the result without help. This comes
+   before the first feature, not after it.
 7. **Measure the encodings, do not assume them.** For each source type in use, check what the
    toolchain actually writes on disk — some editors emit UTF-16 — and record the result in
    `techContext.md`. Where it is not UTF-8, declare it per pattern in `.gitattributes` with
@@ -85,10 +90,11 @@ output; an unknown is asked, never assumed.
     `PreToolUse` run of the document gate, and `SessionStart`, which reports the project's state
     into a fresh session. Claude Code lets a hook it cannot start fail open, so this layer is a
     fast signal, not the gate. `.githooks/pre-commit` is the gate, and git refuses the commit on
-    any non-zero exit. Confirm `core.hooksPath` is set, extend the deny list with anything this
-    project must never run, then demonstrate two refusals in front of the owner: a deny rule
-    firing, and a commit refused by the document gate. A protection the owner has not watched work
-    does not count as installed.
+    any non-zero exit. Confirm `core.hooksPath` is set; on GitHub, have the owner make
+    `.github/workflows/document-gate.yml` a required status check. Extend the deny list with
+    anything this project must never run, then demonstrate two refusals in front of the owner: a
+    deny rule firing, and a commit refused by the document gate. A protection the owner has not
+    watched work does not count as installed.
 11. **Prove the session survives `/clear`.** With a plan recorded in `activeContext.md`, clear the
     session and confirm the state report names the kit version, the Tier 1 files, the git state and
     the open plan. This is the project's continuity model, and an untested continuity model is an

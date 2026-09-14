@@ -29,12 +29,12 @@ Then I state in one short paragraph where the project stands, whether a plan is 
 
 My memory resets between sessions; `memory-bank/` is all that persists. Everything I read stays in context, so reads are tiered and budgeted. **Creation timing:** the Memory Bank is created via `docs/BOOTSTRAP.md` when implementation state must be tracked persistently — never earlier, and never for planning deliverables, where the project document plus the approved plan are the record.
 
-**Tier 1 — read every task.** Budgets are in words, checked by `.claude/tools/check-docs.py`, tuned per project in `techContext.md`; a budget that forces out needed information is wrong and is raised.
+**Tier 1 — read every task.** Budgets are in words, checked by `.claude/tools/check-docs.py`, tuned per project in `budgets.json`; a budget that forces out needed information is wrong and is raised.
 - `activeContext.md` [~400 words] — last verified change, the approved plan with each step's state, the exact next step, and any open escalation per *Halt and escalate*. It is what a cleared session reads to know where it is.
 - `progress.md` [~650 words] — approved work: what works, what remains, what is broken; state, not history.
 - `decisions/decisions.md` [~400 words] — the index only: number, one-line summary, status. Its format, and what earns a record, live in `docs/decision-format.md`, read only when a record is written.
 
-**Tier 2 — read when the task touches it.** `projectbrief.md` (requirements, goals, scope — authoritative), `productContext.md` (why it exists, who uses it), `systemPatterns.md` (architecture, boundaries, interfaces, contracts crossing a process or language boundary), `techContext.md` (stack, versions, toolchain paths, commands, budgets, kit version, supported operating systems, working language, per operating system).
+**Tier 2 — read when the task touches it.** `projectbrief.md` (requirements, goals, scope — authoritative), `productContext.md` (why it exists, who uses it), `systemPatterns.md` (architecture, boundaries, interfaces, contracts crossing a process or language boundary), `techContext.md` (stack, versions, toolchain paths, commands, kit version, supported operating systems, working language, per operating system).
 
 **Tier 3 — read only the single item I need, never the whole folder.** `decisions/NNNN-*.md`, `decisions/superseded.md`, `backlog.md` (candidates, not yet approved).
 
@@ -106,10 +106,10 @@ Each cycle I name at most three highest-consequence backlog items. Cleanup runs 
 
 ## Quality gates
 A change is "done" only when the gates for the touched runtime pass with clean output.
-- **One command runs every gate**, recorded in `techContext.md`, so the owner can run it themselves at any moment; its output on their screen outranks any report of mine. Whatever a tool can check belongs in that command or a hook, not in my promises.
-- **The gate writes its own evidence.** Every run appends its full output to `logs/gate-<UTC timestamp>.log`, git-ignored and written by the command, not by me; the Record step names that file. That is what makes a gate result checkable by someone who does not read code.
-- **Per runtime**, the gate set and its pass condition are defined in that language's rule file — not here, and not invented per task. A runtime with no gate command recorded is a blocker I report; so is a language with no rule file in `.claude/rules/`, and code in that language is not written until one exists.
-- **Documents are gated too.** `python .claude/tools/check-docs.py` checks encoding, budgets, cross-references, Tier 1 completeness, the decision index and voice, and is part of the one gate command.
+- **One command runs every gate**: `python .claude/tools/run-gates.py` runs the document gate, then each gate in `.claude/gates.json`, so the owner can run it at any moment; its output on their screen outranks any report of mine. Whatever a tool can check belongs in that command or a hook, not in my promises.
+- **The gate writes its own evidence.** Every run writes its full output to `logs/gate-<UTC timestamp>.log` and prints that file's SHA-256 — the command writes both, not me — and the Record step names them. That is what makes a gate result checkable by someone who does not read code.
+- **Per runtime**, the gate set and its pass condition are defined in that language's rule file — not here, and not invented per task. A runtime with no gate listed is a blocker I report; so is a language with no rule file in `.claude/rules/`; code in it waits until one is written from `docs/templates/language-rules.md`.
+- **Documents are gated too.** `.claude/tools/check-docs.py` checks them; the top of that file lists each check.
 - **Universally:** the Constitution is respected — including its *Testing Standards*, its *Dependency Approval Policy*, and its size *signals*, which I justify rather than obey mechanically.
 - **Enforcement, in two layers.** `.claude/settings.json` denies destructive commands and secret-file reads and logs which instruction files loaded; it also runs the document gate before a commit. That layer **fails open**: a hook Claude Code cannot start, or one that times out, is a non-blocking error and the call proceeds, so it is a fast signal rather than a gate. The gate that **fails closed** is git's own `.githooks/pre-commit`, which refuses the commit even when the interpreter is missing and applies to every committer. I never weaken or route around either; a missing hook is a `backlog.md` entry, not an excuse.
 

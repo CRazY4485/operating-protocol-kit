@@ -5,13 +5,11 @@ paths: ["**/*.mq5", "**/*.mqh"]
 
 # MQL5 Rules
 
-These load when an MQL5 file is read, not at every session start; `docs/BOOTSTRAP.md` step 3
-proves it happened by reading `logs/instructions-loaded.log`. They supplement `CLAUDE.md` and the
-Constitution; nothing here relaxes either. Universal rules — determinism, layering, testing
-policy,
-error-handling policy, precision, observability — live in the Constitution and are not repeated
-here. This file holds what is specific to the MQL5 language and the MetaTrader platform. Machine
-facts — paths, commands, operating system, terminal locations — live in `techContext.md`.
+These rules supplement `CLAUDE.md` and the Constitution; nothing here relaxes either. Universal
+rules — determinism, layering, testing policy, error-handling policy, precision, observability —
+live in the Constitution and are not repeated here. This file holds what is specific to the MQL5
+language and the MetaTrader platform. Machine facts — paths, commands, operating system, terminal
+locations — live in `techContext.md`.
 
 ## The rule that outranks everything else here
 
@@ -184,7 +182,7 @@ the end of the sentence.
   pure functions against fixed fixture arrays, counts assertions, prints `PASSED n / FAILED n` to
   the journal, and writes the same line to `Files/`. It compiles under the same `0 errors, 0
   warnings` condition as the product, and a run reporting zero assertions is a failure, not a pass.
-- **The gate quotes real counts.** The recorded gate command compiles the product and the test
+- **The gate quotes real counts.** The project's MQL5 gate compiles the product and the test
   script and runs the script; its output goes to the gate log like any other runtime's. A claim
   about behaviour cites those counts or it is unverified.
 - **Where a host language exists in the project**, its suite is preferred for anything that can

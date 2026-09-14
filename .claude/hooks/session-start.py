@@ -34,11 +34,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-TIER1 = {
-    "memory-bank/activeContext.md": 400,
-    "memory-bank/progress.md": 650,
-    "memory-bank/decisions/decisions.md": 400,
-}
+# The Tier 1 budgets come from the same module the document gate reads, so the
+# report and the gate cannot disagree about them. The import is guarded because
+# this hook must report even from a partial install.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+try:
+    from kit_config import BUDGETS_FILE, load_budgets
+except ImportError:
+    BUDGETS_FILE, load_budgets = "memory-bank/budgets.json", None
+
 PLAN_ANCHOR = re.compile(r"^\s*<!--\s*plan\s*-->\s*$", re.IGNORECASE)
 PLAN_HEADING = re.compile(r"^#{1,4}\s+.*approved plan", re.IGNORECASE)
 ANY_HEADING = re.compile(r"^#{1,4}\s+")
@@ -65,6 +69,15 @@ def read(path: Path) -> str:
 
 
 def version_report(root: Path) -> str:
+    report = kit_version_report(root)
+    # An installer upgrading the project leaves the steps each newer release
+    # asks for here, because the kit's CHANGELOG.md is not in the project.
+    if (root / ".claude" / "KIT_UPGRADE.md").exists():
+        report += " - UPGRADE PENDING - .claude/KIT_UPGRADE.md lists the steps still to do"
+    return report
+
+
+def kit_version_report(root: Path) -> str:
     shipped = read(root / ".claude" / "KIT_VERSION").strip()
     if not shipped:
         return "kit version: .claude/KIT_VERSION is missing"
@@ -79,8 +92,12 @@ def version_report(root: Path) -> str:
 def memory_bank_report(root: Path) -> list[str]:
     if not (root / "memory-bank").exists():
         return ["memory-bank/: absent - the project is pre-implementation (CLAUDE.md, Session start)"]
-    lines = []
-    for relative, budget in TIER1.items():
+    if load_budgets is None:
+        return [".claude/tools/kit_config.py: MISSING - Tier 1 files and budgets cannot be read"]
+    budgets, _, problems = load_budgets(root)
+    lines = [f"{BUDGETS_FILE}: not used as written - {problem}; the starting budget applies there"
+             for problem in problems]
+    for relative, budget in budgets.items():
         text = read(root / relative)
         if not text:
             lines.append(f"{relative}: MISSING or empty - interrupted bootstrap")
@@ -89,6 +106,21 @@ def memory_bank_report(root: Path) -> list[str]:
         flag = "" if words <= budget else f" - OVER the {budget}-word budget"
         lines.append(f"{relative}: {words} words{flag}")
     return lines
+
+
+def hooks_path_report(root: Path) -> str:
+    """core.hooksPath, flagged unless it is the directory the kit's gate lives in."""
+    configured = git(root, "config", "core.hooksPath")
+    if not configured:
+        return "NOT SET - the pre-commit gate will not run"
+    try:
+        is_kits = (root / configured).resolve() == (root / ".githooks").resolve()
+    except OSError:
+        is_kits = False
+    if is_kits:
+        return configured
+    return (f"{configured} - NOT .githooks, so the kit's pre-commit gate runs only if a hook "
+            "there calls it")
 
 
 def plan_report(root: Path) -> list[str]:
@@ -143,8 +175,8 @@ def main() -> int:
     if (root / ".git").exists():
         head = git(root, "log", "-1", "--oneline") or "no commits yet"
         dirty = [line for line in git(root, "status", "--porcelain").split("\n") if line]
-        hooks_path = git(root, "config", "core.hooksPath") or "NOT SET - the pre-commit gate will not run"
-        lines.append(f"git: HEAD {head}; {len(dirty)} uncommitted change(s); core.hooksPath {hooks_path}")
+        lines.append(f"git: HEAD {head}; {len(dirty)} uncommitted change(s); "
+                     f"core.hooksPath {hooks_path_report(root)}")
     else:
         lines.append("git: not a repository - the checkpoint and gate model cannot work")
 
