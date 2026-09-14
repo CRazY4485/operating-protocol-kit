@@ -13,10 +13,9 @@ Constitution and are referenced, never restated. A section that does not apply s
 rather than being dropped. It is kept out of .claude/rules/ on purpose: Claude Code loads every
 Markdown file there as a rule. -->
 
-These load when a <Language> file is read, not at every session start; `docs/BOOTSTRAP.md` step 3
-proves it happened by reading `logs/instructions-loaded.log`. They supplement `CLAUDE.md` and the
-Constitution; nothing here relaxes either. Project and machine facts — versions, paths, commands —
-live in `techContext.md`, so this file names none of them.
+These rules supplement `CLAUDE.md` and the Constitution; nothing here relaxes either. Project and
+machine facts — versions, paths, commands — live in `techContext.md`, so this file names none of
+them.
 
 ## The rule that outranks everything else here
 

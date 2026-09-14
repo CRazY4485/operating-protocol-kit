@@ -5,11 +5,9 @@ paths: ["**/*.py"]
 
 # Python Rules
 
-These load when a Python file is read, not at every session start; `docs/BOOTSTRAP.md` step 3
-proves it happened by reading `logs/instructions-loaded.log`. They supplement `CLAUDE.md` and the
-Constitution; nothing here relaxes either. Universal rules — determinism, error handling, testing
-policy, security, time and precision — live in the Constitution and are **not** repeated here. This
-file holds only what is specific to Python.
+These rules supplement `CLAUDE.md` and the Constitution; nothing here relaxes either. Universal
+rules — determinism, error handling, testing policy, security, time and precision — live in the
+Constitution and are **not** repeated here. This file holds only what is specific to Python.
 
 ## Naming (PEP 8)
 
@@ -97,8 +95,8 @@ most often, named here so they are caught by a reviewer rather than argued about
 
 ## Tooling and tests
 
-- Formatter, linter, type checker, and test suite all pass with clean output; the gate that runs
-  them is listed in `.claude/gates.json`.
+- Formatter, linter, type checker, and test suite all pass with clean output; together they are the
+  project's Python gate.
 - Dependencies are pinned in a committed lockfile, and the project runs inside a virtual
   environment declared there.
 - Test policy is defined in the Constitution, *Testing Standards*. Python specifics only:

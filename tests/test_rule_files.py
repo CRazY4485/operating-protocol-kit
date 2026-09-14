@@ -35,6 +35,10 @@ MACHINERY = [
 ]
 
 MARKDOWN_RULES = KIT / ".claude" / "rules" / "markdown.md"
+# The shipped rule files, and the skeleton a new language's rule file starts from.
+RULE_FILES = sorted((KIT / ".claude" / "rules").glob("*.md")) + [
+    KIT / "docs" / "templates" / "language-rules.md"
+]
 
 
 def machinery_named_in(path: Path) -> list[str]:
@@ -42,8 +46,9 @@ def machinery_named_in(path: Path) -> list[str]:
     return [name for name in MACHINERY if name in text]
 
 
-def test_the_markdown_rules_name_none_of_the_kits_machinery() -> None:
-    assert machinery_named_in(MARKDOWN_RULES) == []
+@pytest.mark.parametrize("path", RULE_FILES, ids=lambda path: path.name)
+def test_a_rule_file_names_none_of_the_kits_machinery(path: Path) -> None:
+    assert machinery_named_in(path) == []
 
 
 def test_the_markdown_rules_are_about_writing_not_the_gate() -> None:

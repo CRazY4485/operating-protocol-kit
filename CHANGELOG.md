@@ -91,6 +91,12 @@ the voice of deliverables, which it never did.
   points. The file loads whenever a Markdown file is read, in practice every task, so each of the
   261 words it lost was context paid on every one. It is 655 words now, and a test keeps the kit's
   machinery out of it.
+- **The language rule files and their skeleton drop the kit's machinery too.** Each opened with
+  how rule files load and how step 3 of `BOOTSTRAP.md` proves it — the first half is in *Session
+  hygiene*, the second in step 3 itself — and `python.md` and `mql5.md` named `.claude/gates.json`
+  as the place their gate is listed. They now state what the language's gate must contain and
+  leave where it is listed to the gate runner. The same test covers every rule file and the
+  skeleton.
 
 ### Added
 
@@ -171,7 +177,8 @@ the voice of deliverables, which it never did.
 
 Replace outright — a project has no reason to have edited them: `.claude/tools/check-docs.py`,
 `.claude/hooks/session-start.py`, `.claude/rules/markdown.md`, `.claude/rules/python.md`,
-`.claude/rules/mql5.md`, `docs/templates/activeContext.md` and `docs/templates/superseded.md`.
+`.claude/rules/dotnet.md`, `.claude/rules/mql5.md`, `docs/templates/activeContext.md` and
+`docs/templates/superseded.md`.
 New files, copied as they are: `.claude/tools/kit_config.py`, which `check-docs.py` now needs,
 `.claude/tools/run-gates.py`, `docs/templates/gates.json`, `docs/templates/voice.json`,
 `docs/templates/language-rules.md` and `.github/workflows/document-gate.yml`.
