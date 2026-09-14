@@ -6,6 +6,7 @@ it must produce, so every check is seen to fire rather than assumed to.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -14,9 +15,11 @@ from pathlib import Path
 import pytest
 
 from kit_testing import (
+    ACTIVE_CONTEXT,
     INDEX,
     KIT,
     SETTINGS,
+    active_context,
     bootstrap,
     filler,
     load_gate,
@@ -416,6 +419,87 @@ def test_warns_on_a_tier1_file_over_its_starting_budget(kit_tree: Path) -> None:
     run = run_gate(kit_tree)
 
     assert f"{budget + 1} words exceeds the starting budget of {budget}" in run.output
+
+
+# --- the last verified change ------------------------------------------------------
+
+GATE_LOG = "logs/gate-20260915T101200Z.log"
+
+
+def test_warns_when_active_context_has_no_verified_anchor(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, ACTIVE_CONTEXT, "# Active context\n\nOne fact.\n")
+
+    run = run_gate(kit_tree)
+
+    assert f"WARN  {ACTIVE_CONTEXT}: no `<!-- verified -->` anchor" in run.output
+
+
+@pytest.mark.parametrize(
+    "verified",
+    ["Login form added; the tests pass.", f"Login form added; {GATE_LOG}.",
+     "Login form added; sha256 " + "a" * 64 + "."],
+    ids=["neither", "log without hash", "hash without log"],
+)
+def test_warns_when_the_last_verified_change_cites_no_log_and_hash(
+    kit_tree: Path, verified: str
+) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, ACTIVE_CONTEXT, active_context(verified))
+
+    run = run_gate(kit_tree)
+
+    assert run.code == 0, run.output
+    assert "the last verified change cites no gate log with its SHA-256" in run.output
+
+
+def test_reads_the_verified_section_only_up_to_the_next_heading(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    text = active_context("Login form added.") + f"\n{GATE_LOG}, sha256 {'a' * 64}\n"
+    write(kit_tree, ACTIVE_CONTEXT, text)
+
+    assert "cites no gate log" in run_gate(kit_tree).output
+
+
+def test_accepts_a_hash_that_matches_the_cited_log(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, GATE_LOG, "gate output\n")
+    digest = hashlib.sha256(b"gate output\n").hexdigest()
+    write(kit_tree, ACTIVE_CONTEXT, active_context(f"Login form added; {GATE_LOG}, sha256 {digest}."))
+
+    run = run_gate(kit_tree)
+
+    assert (run.errors, run.warnings) == (0, 0), run.output
+
+
+def test_rejects_a_hash_that_does_not_match_the_cited_log(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, GATE_LOG, "gate output\n")
+    write(kit_tree, ACTIVE_CONTEXT, active_context(f"Login form added; {GATE_LOG}, sha256 {'f' * 64}."))
+
+    run = run_gate(kit_tree)
+
+    assert run.code == 1, run.output
+    assert f"does not match {GATE_LOG}" in run.output
+
+
+def test_takes_a_citation_as_written_when_the_log_is_not_on_this_machine(kit_tree: Path) -> None:
+    # Logs are git-ignored: another clone, or CI, never has them.
+    bootstrap(kit_tree)
+    write(kit_tree, ACTIVE_CONTEXT, active_context(f"Login form added; {GATE_LOG}, sha256 {'f' * 64}."))
+
+    run = run_gate(kit_tree)
+
+    assert (run.errors, run.warnings) == (0, 0), run.output
+
+
+def test_requires_the_verified_anchor_in_the_active_context_template(kit_tree: Path) -> None:
+    path = kit_tree / PLAN_TEMPLATE
+    path.write_bytes(path.read_bytes().replace(b"<!-- verified -->\n", b""))
+
+    run = run_gate(kit_tree)
+
+    assert f"ERROR {PLAN_TEMPLATE}: no `<!-- verified -->` anchor" in run.output
 
 
 # --- project budgets ---------------------------------------------------------------

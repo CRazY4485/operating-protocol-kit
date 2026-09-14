@@ -59,10 +59,10 @@ the voice of deliverables, which it never did.
   would have been a broken link. A link that leaves the repository is now an error of its own.
 - **`docs/templates/activeContext.md` fits the budget of the file it becomes.** At 433 words it
   was over the 400-word Tier 1 budget of `memory-bank/activeContext.md`, so every project started
-  over budget the moment step 5 of `BOOTSTRAP.md` copied it. It is 238 words now: the rationale it
-  repeated from `CLAUDE.md` is referenced instead, and the two instructions `CLAUDE.md` does not
-  carry — keep the plan anchor through translation, and put nothing but the plan beneath it —
-  sit beside the anchor.
+  over budget the moment step 5 of `BOOTSTRAP.md` copied it. It is 239 words now: the rationale it
+  repeated from `CLAUDE.md` is referenced instead, and the instructions `CLAUDE.md` does not carry
+  — keep both anchors through translation, and put nothing but the plan beneath the plan anchor —
+  sit in two short comments.
 - **A reference in `docs/templates/superseded.md` resolved to nothing.** It named the
   "Alternatives rejected" section, a heading that exists only inside the example record in a
   code block; it now points at *Structure of a record*. The gate found it the first time it read
@@ -91,6 +91,13 @@ the voice of deliverables, which it never did.
   gate list, since a runtime with no recorded gate is a blocker. `.claude/gates.json` belongs to
   the project: step 6 of `BOOTSTRAP.md` creates it from `docs/templates/gates.json`, and the
   document gate refuses a malformed one at commit rather than at the next run.
+- **The last verified change must cite its evidence.** `CLAUDE.md` has the Record step name the
+  gate log behind a change, but nothing checked that it did, and a claim with no log is the kind
+  that corrupts a project's record fastest. `activeContext.md` now carries a `<!-- verified -->`
+  anchor under that heading, found through translation like the plan anchor. The gate warns when
+  the section cites no `logs/gate-…log` with a SHA-256, and fails when the cited log is on this
+  machine and its hash is not the one cited: the record then claims evidence the log does not
+  hold. Logs are git-ignored, so on another clone or in CI the citation is taken as written.
 - **The document gate checks `.claude/settings.json`.** A file that is not valid JSON is an
   error: Claude Code ignores it, which drops every deny rule and hook at once. An interpreter
   named by the Python hooks that does not start Python 3.9+ on the machine the gate runs on is a
@@ -152,7 +159,9 @@ Then, beyond the merge:
 
 - A `memory-bank/activeContext.md` made from the 3.x template still carries that template's
   preamble, about half of its 400-word budget. Replace the preamble with the two comments of the
-  new template, and keep the `<!-- plan -->` anchor where it is.
+  new template, and keep the `<!-- plan -->` anchor where it is. Put `<!-- verified -->` on the
+  line after the last-verified-change heading, and cite there the gate log of the last accepted
+  change with the SHA-256 `run-gates.py` printed for it; the gate warns until both are there.
 - The gate command a project recorded in `techContext.md` becomes an entry in
   `.claude/gates.json`, started from `docs/templates/gates.json`; `techContext.md` then records
   `python .claude/tools/run-gates.py` as the one gate command.

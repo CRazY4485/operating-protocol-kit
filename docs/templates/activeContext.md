@@ -1,17 +1,17 @@
 # Active context
 
 <!-- Copied to memory-bank/activeContext.md at bootstrap and translated into the working language.
-What it holds and when it changes: CLAUDE.md, *Memory Bank*. Why the plan lives here: CLAUDE.md,
-*Continuity across `/clear`*. -->
+Keep both anchors when translating: the gate and the SessionStart hook find their sections by the
+anchors, not by the headings. What it holds and when it changes: CLAUDE.md, *Memory Bank*. -->
 
 ## Last verified change
+<!-- verified -->
 
-What was accepted, and the gate log that proves it. One or two lines.
+What was accepted, and the gate log that proved it with the SHA-256 `run-gates.py` printed.
 
 ## Approved plan
-<!-- Keep the anchor below when this heading is translated: the SessionStart hook finds the plan by
-the anchor, not by the heading, and reads everything from it to the next heading verbatim, so
-nothing but the plan goes there. -->
+<!-- The hook hands everything from the anchor below to the next heading to every fresh session
+verbatim, so nothing but the plan goes there. -->
 <!-- plan -->
 
 - **Goal:** one sentence — what is true when this is finished.

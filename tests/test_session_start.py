@@ -122,4 +122,4 @@ def test_reads_the_plan_from_a_file_made_from_the_shipped_template(tmp_path: Pat
     assert "open plan, verbatim from activeContext.md:" in report
     assert "**Goal:**" in report
     # The instruction above the anchor is guidance, not part of the plan.
-    assert "Keep the anchor" not in report
+    assert "hands everything" not in report

@@ -20,13 +20,16 @@ Checks performed:
   6. Decision index      - every number in the index table has a matching
      decisions/NNNN-*.md file, and every such file appears in the index.
   7. Templates           - every template bootstrap copies exists, and the
-     activeContext.md template keeps the anchor the SessionStart hook reads.
-  8. Kit version         - .claude/KIT_VERSION exists and is a semantic version.
-  9. Client settings     - .claude/settings.json parses, and the interpreter its
+     activeContext.md template keeps its <!-- plan --> and <!-- verified --> anchors.
+  8. Evidence            - the last verified change in activeContext.md cites a
+     gate log with its SHA-256 (a warning when it does not), and when that log
+     is on this machine, the hash matches it.
+  9. Kit version         - .claude/KIT_VERSION exists and is a semantic version.
+ 10. Client settings     - .claude/settings.json parses, and the interpreter its
      Python hooks name starts on this machine (a warning when it does not).
- 10. Gate list          - .claude/gates.json, if present, is one run-gates.py can
+ 11. Gate list          - .claude/gates.json, if present, is one run-gates.py can
      use, so a broken list is refused at commit rather than found at the next run.
- 11. Unmerged kit files  - a *.kit-new an installer left beside a file of the
+ 12. Unmerged kit files  - a *.kit-new an installer left beside a file of the
      same name (a warning).
 
 The ban on first-person commentary in project deliverables is not checked here:
@@ -48,6 +51,7 @@ printed so they are not invisible.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import posixpath
@@ -124,6 +128,14 @@ TEMPLATE_TARGETS = {
 # PLAN_ANCHOR in .claude/hooks/session-start.py exactly; a test holds them equal.
 PLAN_TEMPLATE = "docs/templates/activeContext.md"
 PLAN_ANCHOR = re.compile(r"^\s*<!--\s*plan\s*-->\s*$", re.IGNORECASE)
+
+# The section a Record fills with the change it accepted, found by this anchor
+# because its heading is translated. It cites the gate log that proved the
+# change and the log's SHA-256, both as run-gates.py prints them.
+ACTIVE_CONTEXT = "memory-bank/activeContext.md"
+VERIFIED_ANCHOR = re.compile(r"^\s*<!--\s*verified\s*-->\s*$", re.IGNORECASE)
+GATE_LOG = re.compile(r"logs/gate-\d{8}T\d{6}Z(?:-\d+)?\.log")
+SHA256 = re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{64}(?![0-9A-Fa-f])")
 UNMERGED_SUFFIX = ".kit-new"
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
@@ -359,6 +371,43 @@ def check_templates(root: Path, documents: dict[str, list[str]]) -> None:
     if lines is not None and not any(PLAN_ANCHOR.match(line) for line in lines):
         error(PLAN_TEMPLATE, 0,
               "no `<!-- plan -->` anchor; the SessionStart hook finds the open plan by it")
+    if lines is not None and not any(VERIFIED_ANCHOR.match(line) for line in lines):
+        error(PLAN_TEMPLATE, 0,
+              "no `<!-- verified -->` anchor; the gate finds the last verified change by it")
+
+
+def check_last_verified_change(root: Path) -> None:
+    """The accepted change cites the gate log that proved it, and that log still says so."""
+    path = root / ACTIVE_CONTEXT
+    if not path.exists():
+        return  # check_memory_bank reports a missing Tier 1 file
+    lines = path.read_text(encoding="utf-8", errors="replace").split("\n")
+    start = next((i for i, line in enumerate(lines) if VERIFIED_ANCHOR.match(line)), None)
+    if start is None:
+        warn(ACTIVE_CONTEXT, 0, "no `<!-- verified -->` anchor, so the last verified change "
+             f"cannot be checked against its gate log; {PLAN_TEMPLATE} carries it")
+        return
+    section = []
+    for line in lines[start + 1:]:
+        if HEADING.match(line):
+            break
+        section.append(line)
+    text = "\n".join(section)
+    log, digest = GATE_LOG.search(text), SHA256.search(text)
+    if log is None or digest is None:
+        warn(ACTIVE_CONTEXT, start + 1, "the last verified change cites no gate log with its "
+             "SHA-256, as run-gates.py prints them; see CLAUDE.md, Quality gates")
+        return
+    # Logs are git-ignored and machine-local. On another clone, or in CI, the
+    # file is absent and the citation is taken as written.
+    log_path = root / log.group(0)
+    if not log_path.is_file():
+        return
+    actual = hashlib.sha256(log_path.read_bytes()).hexdigest()
+    if actual != digest.group(0).lower():
+        error(ACTIVE_CONTEXT, start + 1,
+              f"sha256 {digest.group(0)} does not match {log.group(0)}, whose sha256 is "
+              f"{actual}; the record cites evidence the log does not hold")
 
 
 def check_gate_list(root: Path) -> None:
@@ -559,6 +608,7 @@ def main() -> int:
 
     check_templates(root, documents)
     check_memory_bank(root)
+    check_last_verified_change(root)
     check_decisions(root)
     check_version(root)
     check_settings(root)

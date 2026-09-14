@@ -87,10 +87,22 @@ TIER1 = (
 INDEX = "memory-bank/decisions/decisions.md"
 
 
+ACTIVE_CONTEXT = "memory-bank/activeContext.md"
+# A gate log no test machine holds, so its citation is taken as written.
+CITED_ELSEWHERE = "logs/gate-20260101T000000Z.log, sha256 " + "0" * 64
+
+
+def active_context(verified: str) -> str:
+    """An activeContext.md whose last verified change says `verified`."""
+    return ("# Active context\n\n## Last verified change\n<!-- verified -->\n"
+            f"{verified}\n\n## Approved plan\n<!-- plan -->\n\n- [ ] Step one\n")
+
+
 def bootstrap(root: Path) -> None:
     """A minimal Memory Bank that passes every check."""
     for relative in TIER1:
         write(root, relative, "# State\n\nOne fact.\n")
+    write(root, ACTIVE_CONTEXT, active_context(f"Bootstrap finished; {CITED_ELSEWHERE}."))
     write(root, INDEX, "# Decisions\n\n| Number | Summary | Status |\n|---|---|---|\n"
                        "| 0001 | First decision | Active |\n")
     write(root, "memory-bank/decisions/0001-first-decision.md", "# 0001 First decision\n")

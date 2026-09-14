@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from kit_testing import KIT, bootstrap, write, write_json
+from kit_testing import ACTIVE_CONTEXT, active_context, bootstrap, run_gate, write, write_json
 
 RUNNER = Path(".claude") / "tools" / "run-gates.py"
 GATES = ".claude/gates.json"
@@ -194,6 +194,34 @@ def test_a_gates_file_it_cannot_use_fails_and_runs_none_of_it(kit_tree: Path) ->
     assert "ran-7f3a" not in run.text
 
 
+def record_citing(root: Path, run: Run) -> None:
+    cited = run.log.relative_to(root).as_posix()
+    write(root, ACTIVE_CONTEXT, active_context(f"Accepted; {cited}, sha256 {run.digest}."))
+
+
+def test_a_record_citing_the_runners_log_passes_the_gate(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    set_gates(kit_tree)
+    record_citing(kit_tree, run_runner(kit_tree))
+
+    gate = run_gate(kit_tree)
+
+    assert (gate.errors, gate.warnings) == (0, 0), gate.output
+
+
+def test_a_log_changed_after_its_record_fails_the_gate(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    set_gates(kit_tree)
+    run = run_runner(kit_tree)
+    record_citing(kit_tree, run)
+    run.log.write_bytes(run.log.read_bytes() + b"run-gates: PASSED\n")
+
+    gate = run_gate(kit_tree)
+
+    assert gate.code == 1, gate.output
+    assert "does not match" in gate.output
+
+
 def test_the_shipped_gates_template_is_a_valid_start(kit_tree: Path) -> None:
     shutil.copyfile(kit_tree / "docs/templates/gates.json", kit_tree / GATES)
     config = json.loads((kit_tree / GATES).read_text(encoding="utf-8"))
@@ -227,8 +255,6 @@ def test_the_shipped_gates_template_is_a_valid_start(kit_tree: Path) -> None:
 def test_the_document_gate_rejects_a_gates_file_it_cannot_use(
     kit_tree: Path, config: str, message: str
 ) -> None:
-    from kit_testing import run_gate
-
     write(kit_tree, GATES, config + "\n")
 
     run = run_gate(kit_tree)
