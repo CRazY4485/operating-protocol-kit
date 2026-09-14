@@ -19,6 +19,7 @@ from kit_testing import (
     INDEX,
     KIT,
     SETTINGS,
+    VOICE_FILE,
     active_context,
     bootstrap,
     filler,
@@ -500,6 +501,102 @@ def test_requires_the_verified_anchor_in_the_active_context_template(kit_tree: P
     run = run_gate(kit_tree)
 
     assert f"ERROR {PLAN_TEMPLATE}: no `<!-- verified -->` anchor" in run.output
+
+
+# --- voice in the Memory Bank ------------------------------------------------------
+
+
+def test_warns_on_a_listed_phrase_in_the_memory_bank(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, "memory-bank/progress.md", "# Progress\n\nMəncə Redis daha yaxşıdır.\n")
+
+    run = run_gate(kit_tree)
+
+    assert run.code == 0, run.output
+    assert 'WARN  memory-bank/progress.md:3: "məncə"' in run.output
+
+
+def test_finds_a_listed_phrase_in_a_decision_record(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    append(kit_tree, "memory-bank/decisions/0001-first-decision.md", "\nI think this holds.\n")
+
+    assert 'memory-bank/decisions/0001-first-decision.md:3: "I think"' in run_gate(kit_tree).output
+
+
+def test_matches_a_listed_phrase_only_as_whole_words(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, VOICE_FILE, '{"phrases": ["let me"]}\n')
+    write(kit_tree, "memory-bank/progress.md", "# Progress\n\nThe outlet menu is done.\n")
+
+    run = run_gate(kit_tree)
+
+    assert (run.errors, run.warnings) == (0, 0), run.output
+
+
+def test_ignores_a_listed_phrase_inside_a_code_block(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, "memory-bank/progress.md", "# Progress\n\n```text\nI think\n```\n")
+
+    run = run_gate(kit_tree)
+
+    assert (run.errors, run.warnings) == (0, 0), run.output
+
+
+def test_warns_when_the_voice_file_is_missing(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    (kit_tree / VOICE_FILE).unlink()
+
+    run = run_gate(kit_tree)
+
+    assert run.code == 0, run.output
+    assert f"WARN  {VOICE_FILE}: is missing, so no phrases are checked" in run.output
+
+
+def test_an_empty_phrase_list_is_a_declared_choice(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, VOICE_FILE, '{"phrases": []}\n')
+    write(kit_tree, "memory-bank/progress.md", "# Progress\n\nI think so.\n")
+
+    run = run_gate(kit_tree)
+
+    assert (run.errors, run.warnings) == (0, 0), run.output
+
+
+def test_checks_no_voice_before_bootstrap(kit_tree: Path) -> None:
+    run = run_gate(kit_tree)
+
+    assert VOICE_FILE not in run.output
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [
+        ("{ not json", "not valid JSON"),
+        ('["I think"]', "a JSON object with a `phrases` list"),
+        ('{"phrases": "I think"}', "a JSON object with a `phrases` list"),
+        ('{"phrases": ["I think", ""]}', "phrase 2 must be non-empty text"),
+        ('{"phrases": [], "language": "az"}', "unknown key `language`"),
+    ],
+    ids=["not json", "not an object", "not a list", "empty phrase", "unknown key"],
+)
+def test_rejects_a_voice_file_it_cannot_use(kit_tree: Path, content: str, message: str) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, VOICE_FILE, content + "\n")
+
+    run = run_gate(kit_tree)
+
+    assert run.code == 1, run.output
+    assert f"ERROR {VOICE_FILE}: " in run.output
+    assert message in run.output
+
+
+def test_the_shipped_voice_template_is_usable(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    (kit_tree / VOICE_FILE).write_bytes((kit_tree / "docs/templates/voice.json").read_bytes())
+
+    run = run_gate(kit_tree)
+
+    assert (run.errors, run.warnings) == (0, 0), run.output
 
 
 # --- project budgets ---------------------------------------------------------------

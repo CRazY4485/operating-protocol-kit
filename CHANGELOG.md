@@ -47,9 +47,10 @@ the voice of deliverables, which it never did.
   every path under `.claude/rules/`, and those were the only documents the gate loaded, so it
   returned before its first comparison on every run while `.claude/rules/markdown.md` said the
   gate "greps for these phrases". It is removed rather than aimed at the deliverables: they are
-  written in the working language, and an English phrase list would pass nearly all of them. The
-  rule stands, held by review against the checkable test in `markdown.md`, and neither that file
-  nor `CLAUDE.md` claims the gate enforces it any more.
+  written in the working language, and an English phrase list would pass nearly all of them. Its
+  place in `memory-bank/` is taken by a phrase list the project keeps in its own working language;
+  see *Added*. Elsewhere the rule is held by review against the checkable test in `markdown.md`,
+  and neither that file nor `CLAUDE.md` claims otherwise.
 - **A commit the `PreToolUse` hook blocks now tells Claude why.** On exit 2 Claude Code gives
   Claude the hook's stderr as the reason, and the gate printed its findings to stdout, so Claude
   saw a refused commit and nothing else. With `--hook` the findings now go to stderr.
@@ -91,6 +92,15 @@ the voice of deliverables, which it never did.
   gate list, since a runtime with no recorded gate is a blocker. `.claude/gates.json` belongs to
   the project: step 6 of `BOOTSTRAP.md` creates it from `docs/templates/gates.json`, and the
   document gate refuses a malformed one at commit rather than at the next run.
+- **The Memory Bank is checked for opinion and narration, in the working language.**
+  `memory-bank/` records facts, and an opinion written there as one ("I think…", "məncə…") is
+  read by every later session as settled. The project lists the phrases that mark one in
+  `memory-bank/voice.json`, copied at bootstrap from `docs/templates/voice.json`, which starts
+  with English and Azerbaijani phrases. The gate warns on each it finds, with file and line, outside
+  code blocks and only as whole words. Only explicit markers are listed: Azerbaijani marks the
+  first person mostly with a verb suffix, and matching suffixes would flag possessives too. It is a
+  warning, not an error, because a phrase list cannot tell a quotation from a claim. A missing
+  list is a warning of its own; `{"phrases": []}` declares that none are wanted.
 - **The last verified change must cite its evidence.** `CLAUDE.md` has the Record step name the
   gate log behind a change, but nothing checked that it did, and a claim with no log is the kind
   that corrupts a project's record fastest. `activeContext.md` now carries a `<!-- verified -->`
@@ -141,8 +151,8 @@ Replace outright — a project has no reason to have edited them: `.claude/tools
 `.claude/hooks/session-start.py`, `.claude/rules/markdown.md`, `.claude/rules/python.md`,
 `.claude/rules/mql5.md`, `docs/templates/activeContext.md` and `docs/templates/superseded.md`.
 New files, copied as they are: `.claude/tools/kit_config.py`, which `check-docs.py` now needs,
-`.claude/tools/run-gates.py`, `docs/templates/gates.json`, `docs/templates/language-rules.md` and
-`.github/workflows/document-gate.yml`.
+`.claude/tools/run-gates.py`, `docs/templates/gates.json`, `docs/templates/voice.json`,
+`docs/templates/language-rules.md` and `.github/workflows/document-gate.yml`.
 
 Merge:
 
@@ -150,10 +160,10 @@ Merge:
   own hooks. Keep the hook `command` the installer wrote into the `.kit-new`, which is the
   interpreter it proved on this machine.
 - `CLAUDE.md` — *Quality gates*: the one gate command is `run-gates.py`, its log comes with a
-  hash, the document gate checks `.claude/settings.json`, not voice, and a language without a
-  rule file points at `docs/templates/language-rules.md`. *Memory Bank*: Tier 1 budgets are tuned
-  in `budgets.json`, not `techContext.md`.
-- `docs/BOOTSTRAP.md` — steps 3, 6 and 10.
+  hash, what the document gate checks is listed once, in *Gate* in `markdown.md`, and a language
+  without a rule file points at `docs/templates/language-rules.md`. *Memory Bank*: Tier 1 budgets
+  are tuned in `budgets.json`, not `techContext.md`.
+- `docs/BOOTSTRAP.md` — steps 3, 5, 6 and 10.
 
 Then, beyond the merge:
 
@@ -162,6 +172,8 @@ Then, beyond the merge:
   new template, and keep the `<!-- plan -->` anchor where it is. Put `<!-- verified -->` on the
   line after the last-verified-change heading, and cite there the gate log of the last accepted
   change with the SHA-256 `run-gates.py` printed for it; the gate warns until both are there.
+- Copy `docs/templates/voice.json` to `memory-bank/voice.json`, and extend it to the working
+  language if the list lacks it. Until it exists the gate warns that no phrases are checked.
 - The gate command a project recorded in `techContext.md` becomes an entry in
   `.claude/gates.json`, started from `docs/templates/gates.json`; `techContext.md` then records
   `python .claude/tools/run-gates.py` as the one gate command.

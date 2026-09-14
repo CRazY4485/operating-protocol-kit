@@ -88,6 +88,7 @@ INDEX = "memory-bank/decisions/decisions.md"
 
 
 ACTIVE_CONTEXT = "memory-bank/activeContext.md"
+VOICE_FILE = "memory-bank/voice.json"
 # A gate log no test machine holds, so its citation is taken as written.
 CITED_ELSEWHERE = "logs/gate-20260101T000000Z.log, sha256 " + "0" * 64
 
@@ -103,6 +104,7 @@ def bootstrap(root: Path) -> None:
     for relative in TIER1:
         write(root, relative, "# State\n\nOne fact.\n")
     write(root, ACTIVE_CONTEXT, active_context(f"Bootstrap finished; {CITED_ELSEWHERE}."))
+    write(root, VOICE_FILE, '{"phrases": ["I think", "məncə"]}\n')
     write(root, INDEX, "# Decisions\n\n| Number | Summary | Status |\n|---|---|---|\n"
                        "| 0001 | First decision | Active |\n")
     write(root, "memory-bank/decisions/0001-first-decision.md", "# 0001 First decision\n")

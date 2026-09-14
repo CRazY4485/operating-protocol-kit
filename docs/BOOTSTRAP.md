@@ -51,8 +51,9 @@ output; an unknown is asked, never assumed.
    from the last: `projectbrief.md` distilled from the specification first, then
    `productContext.md`, `systemPatterns.md`, `techContext.md`, then `progress.md` and an empty
    `backlog.md`, and finally — copied from `docs/templates/` and translated — `activeContext.md`,
-   `decisions/decisions.md` and `decisions/superseded.md`. Confirm each with the owner: everything
-   downstream inherits errors made here, so accuracy beats speed. Record the value of
+   `decisions/decisions.md` and `decisions/superseded.md`, plus `voice.json`, extended to the
+   working language if it lacks it. Confirm each with the owner: everything downstream inherits
+   errors made here, so accuracy beats speed. Record the value of
    `.claude/KIT_VERSION` in `techContext.md`, so a later session can see whether the project is
    running an outdated document set. `techContext.md` is filled progressively through steps 6 to
    8 and confirmed complete at the end.
@@ -89,12 +90,11 @@ output; an unknown is asked, never assumed.
     `PreToolUse` run of the document gate, and `SessionStart`, which reports the project's state
     into a fresh session. Claude Code lets a hook it cannot start fail open, so this layer is a
     fast signal, not the gate. `.githooks/pre-commit` is the gate, and git refuses the commit on
-    any non-zero exit. Confirm `core.hooksPath` is set; where the repository is on GitHub, have the
-    owner make the job in `.github/workflows/document-gate.yml` a required status check, which
-    holds the gate for a clone that never set it. Extend the deny list with anything this
-    project must never run, then demonstrate two refusals in front of the owner: a deny rule
-    firing, and a commit refused by the document gate. A protection the owner has not watched work
-    does not count as installed.
+    any non-zero exit. Confirm `core.hooksPath` is set; on GitHub, have the owner make
+    `.github/workflows/document-gate.yml` a required status check. Extend the deny list with
+    anything this project must never run, then demonstrate two refusals in front of the owner: a
+    deny rule firing, and a commit refused by the document gate. A protection the owner has not
+    watched work does not count as installed.
 11. **Prove the session survives `/clear`.** With a plan recorded in `activeContext.md`, clear the
     session and confirm the state report names the kit version, the Tier 1 files, the git state and
     the open plan. This is the project's continuity model, and an untested continuity model is an

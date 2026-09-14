@@ -24,17 +24,19 @@ Checks performed:
   8. Evidence            - the last verified change in activeContext.md cites a
      gate log with its SHA-256 (a warning when it does not), and when that log
      is on this machine, the hash matches it.
-  9. Kit version         - .claude/KIT_VERSION exists and is a semantic version.
- 10. Client settings     - .claude/settings.json parses, and the interpreter its
+  9. Voice               - in memory-bank/, each phrase the project lists in
+     memory-bank/voice.json is a warning, with its file and line.
+ 10. Kit version         - .claude/KIT_VERSION exists and is a semantic version.
+ 11. Client settings     - .claude/settings.json parses, and the interpreter its
      Python hooks name starts on this machine (a warning when it does not).
- 11. Gate list          - .claude/gates.json, if present, is one run-gates.py can
+ 12. Gate list          - .claude/gates.json, if present, is one run-gates.py can
      use, so a broken list is refused at commit rather than found at the next run.
- 12. Unmerged kit files  - a *.kit-new an installer left beside a file of the
+ 13. Unmerged kit files  - a *.kit-new an installer left beside a file of the
      same name (a warning).
 
-The ban on first-person commentary in project deliverables is not checked here:
-deliverables are written in the working language, and a phrase list covers one
-language. It is held by review; see .claude/rules/markdown.md.
+Voice is checked only in memory-bank/, and only for the phrases the project
+lists in its working language: a list the kit fixed would cover one language.
+Deliverables elsewhere are held by review; see .claude/rules/markdown.md.
 
 Usage:
     python .claude/tools/check-docs.py            # from the repository root
@@ -61,7 +63,15 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from kit_config import BUDGETS_FILE, GATES_FILE, TIER1_BUDGETS, load_budgets, load_gates
+from kit_config import (
+    BUDGETS_FILE,
+    GATES_FILE,
+    TIER1_BUDGETS,
+    VOICE_FILE,
+    load_budgets,
+    load_gates,
+    load_voice,
+)
 
 # --------------------------------------------------------------------------
 # Budgets. Words are the budgeted quantity because they track context cost;
@@ -376,6 +386,36 @@ def check_templates(root: Path, documents: dict[str, list[str]]) -> None:
               "no `<!-- verified -->` anchor; the gate finds the last verified change by it")
 
 
+def check_voice(root: Path) -> None:
+    """The Memory Bank records facts; a listed phrase marks an opinion or a narrator.
+
+    A warning, not an error: a phrase list cannot tell a quotation from a claim,
+    and a check that blocks on its own false alarms gets bypassed.
+    """
+    bank = root / "memory-bank"
+    if not bank.exists():
+        return
+    phrases, problems = load_voice(root)
+    for problem in problems:
+        error(VOICE_FILE, 0, problem)
+    if problems:
+        return
+    if phrases is None:
+        warn(VOICE_FILE, 0,
+             'is missing, so no phrases are checked; {"phrases": []} declares that none are wanted')
+        return
+    patterns = [(phrase, re.compile(rf"(?<!\w){re.escape(phrase)}(?!\w)", re.IGNORECASE))
+                for phrase in phrases]
+    for path in sorted(bank.rglob("*.md")):
+        relative = path.relative_to(root).as_posix()
+        lines = path.read_text(encoding="utf-8", errors="replace").split("\n")
+        for number, text in strip_code_blocks(lines):
+            for phrase, pattern in patterns:
+                if pattern.search(text):
+                    warn(relative, number, f'"{phrase}" - an opinion or a narrator in the '
+                         "project's record; state the fact, or move the view to backlog.md")
+
+
 def check_last_verified_change(root: Path) -> None:
     """The accepted change cites the gate log that proved it, and that log still says so."""
     path = root / ACTIVE_CONTEXT
@@ -609,6 +649,7 @@ def main() -> int:
     check_templates(root, documents)
     check_memory_bank(root)
     check_last_verified_change(root)
+    check_voice(root)
     check_decisions(root)
     check_version(root)
     check_settings(root)

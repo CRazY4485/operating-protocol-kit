@@ -56,6 +56,33 @@ def load_budgets(root: Path) -> tuple[dict[str, int], set[str], list[str]]:
     return budgets, project_set, problems
 
 
+# Phrases that put an opinion or a narrator into the project's record, in the
+# project's working language. The list belongs to the project: BOOTSTRAP.md
+# step 5 copies it from docs/templates/voice.json, and the document gate warns on
+# each listed phrase it finds in memory-bank/.
+VOICE_FILE = "memory-bank/voice.json"
+
+
+def load_voice(root: Path) -> tuple[list[str] | None, list[str]]:
+    """The phrases the project listed and what was wrong; None when there is no file."""
+    path = root / VOICE_FILE
+    if not path.exists():
+        return None, []
+    try:
+        config = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError) as err:
+        return [], [f"not valid JSON: {err}"]
+    if not isinstance(config, dict) or not isinstance(config.get("phrases"), list):
+        return [], ["must be a JSON object with a `phrases` list"]
+    problems = [f"unknown key `{key}`" for key in sorted(set(config) - {"phrases"})]
+    for index, phrase in enumerate(config["phrases"], start=1):
+        if not isinstance(phrase, str) or not phrase.strip():
+            problems.append(f"phrase {index} must be non-empty text")
+    if problems:
+        return [], problems
+    return [phrase.strip() for phrase in config["phrases"]], []
+
+
 # The project's own gates, run by run-gates.py after the document gate. The
 # file belongs to the project: BOOTSTRAP.md step 6 creates it from
 # docs/templates/gates.json, and the kit never ships or overwrites it.
