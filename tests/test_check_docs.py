@@ -327,6 +327,12 @@ def test_requires_the_plan_anchor_in_the_active_context_template(kit_tree: Path)
     assert f"ERROR {PLAN_TEMPLATE}: no `<!-- plan -->` anchor" in run.output
 
 
+def test_the_language_skeleton_is_named_where_a_bootstrapped_project_reads() -> None:
+    # A new language usually arrives after bootstrap, and BOOTSTRAP.md is never
+    # read again; CLAUDE.md is read in full every session.
+    assert "`docs/templates/language-rules.md`" in (KIT / "CLAUDE.md").read_text(encoding="utf-8")
+
+
 def test_the_template_keeps_commentary_out_of_the_plan_block() -> None:
     # The hook hands everything below the anchor to every fresh session verbatim.
     text = (KIT / PLAN_TEMPLATE).read_text(encoding="utf-8")

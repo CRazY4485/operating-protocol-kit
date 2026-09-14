@@ -116,7 +116,9 @@ the voice of deliverables, which it never did.
 - **`docs/templates/language-rules.md`**, the skeleton for a language the kit ships no rule file
   for: naming table, structure, errors, security, gate and pass condition, and testing, including
   the reachable equivalent where the language has no test runner. It lives in `docs/templates/`
-  rather than `.claude/rules/`, because Claude Code loads every Markdown file there as a rule. A
+  rather than `.claude/rules/`, because Claude Code loads every Markdown file there as a rule.
+  `CLAUDE.md` names it in the sentence that makes a language without a rule file a blocker: a new
+  language usually arrives after bootstrap, when `BOOTSTRAP.md` is no longer read. A
   rule file written from it is gated like the shipped ones, under a default budget of 2 000 words;
   before, the gate read only the rule files it named, so an added language's file was never
   checked at all.
@@ -141,8 +143,9 @@ Merge:
   own hooks. Keep the hook `command` the installer wrote into the `.kit-new`, which is the
   interpreter it proved on this machine.
 - `CLAUDE.md` — *Quality gates*: the one gate command is `run-gates.py`, its log comes with a
-  hash, and the document gate checks `.claude/settings.json`, not voice. *Memory Bank*: Tier 1
-  budgets are tuned in `budgets.json`, not `techContext.md`.
+  hash, the document gate checks `.claude/settings.json`, not voice, and a language without a
+  rule file points at `docs/templates/language-rules.md`. *Memory Bank*: Tier 1 budgets are tuned
+  in `budgets.json`, not `techContext.md`.
 - `docs/BOOTSTRAP.md` — steps 3, 6 and 10.
 
 Then, beyond the merge:
