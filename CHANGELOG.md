@@ -11,7 +11,7 @@ changed file beside the project's copy as `<name>.kit-new`, and copies the *Upgr
 every release newer than the project's into `.claude/KIT_UPGRADE.md`, since this file stays with
 the kit.
 
-## 4.0.0 — 2026-09-14
+## 4.0.0 — 2026-09-15
 
 Fixes from the enforcement audit in issue #3, and the defects found while checking it. It is a
 major bump because four changes alter what a project may already rely on: `git clean` is denied
@@ -443,9 +443,9 @@ git history, so a project could not tell which revision it had been given.
 ### Added
 
 - `README.md`, `.claude/KIT_VERSION`, `CHANGELOG.md`: entry point, version, and change history.
-- `.claude/tools/check-docs.py`: the gate for the governed documents — encoding and line shape, word and
-  line budgets, cross-reference resolution, Tier 1 completeness, decision-index integrity, the
-  first-person ban, and the presence of a version.
+- `.claude/tools/check-docs.py`: the gate for the governed documents — encoding and line shape,
+  word and line budgets, cross-reference resolution, Tier 1 completeness, decision-index
+  integrity, the first-person ban, and the presence of a version.
 - `.claude/settings.json`: denied destructive commands and secret-file reads, a `PreToolUse` hook
   that blocks a commit whose document gate fails, and an `InstructionsLoaded` hook that logs which
   instruction files actually loaded.

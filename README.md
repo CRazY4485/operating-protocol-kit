@@ -155,10 +155,11 @@ record the owner is meant to audit.
 
 - Git 2.9 or later, for `core.hooksPath`.
 - Python 3.9 or later, for `.claude/tools/check-docs.py` and the hook scripts. Standard library
-  only; no packages to install. `.githooks/pre-commit` finds it as `python3`, `python`, or the Windows `py`
-  launcher, and probes the version rather than trusting the name — on Windows, `python.exe` on
-  `PATH` is often the Microsoft Store app-execution alias, which is not an interpreter. If none of
-  the three is a real Python 3.9+, the hook refuses the commit instead of skipping the check.
+  only; no packages to install. `.githooks/pre-commit` finds it as `python3`, `python`, or the
+  Windows `py` launcher, and probes the version rather than trusting the name — on Windows,
+  `python.exe` on `PATH` is often the Microsoft Store app-execution alias, which is not an
+  interpreter. If none of the three is a real Python 3.9+, the hook refuses the commit instead of
+  skipping the check.
 - The three hooks in `.claude/settings.json` cannot probe: they name one interpreter, and that file
   is shared through git. The installers write the one they proved on the machine they ran on,
   trying `python3` first because it is the only one of the three names that also exists on macOS
