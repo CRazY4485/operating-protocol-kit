@@ -29,7 +29,7 @@ copied into the project.
 | `.claude/settings.json` | Enforced by the client, not read | Denied commands and paths, and the hooks |
 | `.claude/KIT_VERSION` | At bootstrap, and at session start | The version of the document set in force |
 | `.githooks/pre-commit` | Enforced by git on every commit | The document gate, as the layer that fails closed |
-| `.github/workflows/document-gate.yml` | Run by GitHub on every push and pull request | The document gate, for a clone that never enabled the hook |
+| `.github/workflows/document-gate.yml` | Run by GitHub on every pull request and every push to the default branch | The document gate, for a clone that never enabled the hook |
 | `.claude/hooks/session-start.py` | Every session start, `/clear` included | The state report a fresh session opens with |
 | `memory-bank/` | Tiered, per task | Project state — created at bootstrap, not shipped with the kit |
 
@@ -136,8 +136,8 @@ non-zero exit from `.githooks/pre-commit` refuses the commit. So the document ga
 places — in Claude Code for fast feedback, and in git as the check that actually holds, including
 when Python is absent, and including for commits nobody asked Claude to make. Git runs that hook
 only in a clone told to, so `.github/workflows/document-gate.yml` runs the gate once more on every
-push and pull request; made a required status check, it keeps a failing change out of the default
-branch whatever the clone it came from was configured to do.
+pull request and every push to the default branch; made a required status check, it keeps a
+failing change out of the default branch whatever the clone it came from was configured to do.
 
 **Continuity is a file, or it is nothing.** This project's session boundary is `/clear`, which
 starts a new conversation. Anthropic's documentation lists what a *compaction* re-injects from

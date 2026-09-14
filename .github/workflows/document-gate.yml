@@ -2,14 +2,16 @@
 #
 # .githooks/pre-commit refuses a commit only in a clone that has run
 # `git config core.hooksPath .githooks`, and the Claude Code hook fails open.
-# This job runs the same gate on every push and pull request, so a change made
-# in a clone that skipped the setup is still checked. Make it a required status
-# check in the branch protection rules to keep a failing change out of the
-# default branch.
+# This job runs the same gate on every pull request and every push to the
+# default branch, so a change made in a clone that skipped the setup is still
+# checked. Make it a required status check in the branch protection rules to
+# keep a failing change out of the default branch. Pushes to other branches are
+# left to their pull request, so a pushed commit is not checked twice.
 name: Document gate
 
 on:
   push:
+    branches: [main, master]
   pull_request:
 
 permissions:

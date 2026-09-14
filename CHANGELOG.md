@@ -153,14 +153,20 @@ the voice of deliverables, which it never did.
   pending are never overwritten. The work both installers share — this, and naming the hook
   interpreter — now lives once, in the kit-only `install_support.py`, rather than as the same
   Python embedded in two shells. A project upgrading from 3.x to 4.0.0 gets its notes this way.
+- **`install.ps1` works when PowerShell 7 starts it.** Windows PowerShell 5.1 started from
+  PowerShell 7 — every step on a GitHub Windows runner, or `powershell -File` typed in a
+  PowerShell 7 terminal — inherits a module path it cannot load `Get-FileHash` from, and the
+  install stopped at the first file the project already had. The installer now hashes with .NET,
+  which is always there.
 - **Unmerged kit files are reported.** A `*.kit-new` an installer left beside a file is a warning
   naming the file to merge it into. It was an untracked file that `git add -A` would commit.
-- **`.github/workflows/document-gate.yml` runs the document gate on every push and pull request.**
-  `.githooks/pre-commit` binds only in a clone that ran `git config core.hooksPath .githooks`, and
-  nothing reported a clone that had not. The workflow is copied into projects; made a required
-  status check, which `BOOTSTRAP.md` step 10 now asks the owner for, it holds the gate for every
-  clone. `.github/workflows/kit-tests.yml` runs the kit's own suite on Linux with Python 3.9 and
-  the newest release, and on Windows, and stays with the kit.
+- **`.github/workflows/document-gate.yml` runs the document gate on every pull request** and
+  every push to the default branch. `.githooks/pre-commit` binds only in a clone that ran
+  `git config core.hooksPath .githooks`, and nothing reported a clone that had not. The workflow
+  is copied into projects; made a required status check, which `BOOTSTRAP.md` step 10 now asks
+  the owner for, it holds the gate for every clone. `.github/workflows/kit-tests.yml` runs the
+  kit's own suite on Linux with Python 3.9 and the newest release, and on Windows, and stays with
+  the kit. Neither runs on a push to another branch, which its pull request already covers.
 - **The `SessionStart` report flags a `core.hooksPath` that is not `.githooks`.** It flagged the
   setting only when it was unset, so a clone pointed at another hooks directory — where the kit's
   gate runs only if a hook there calls it — reported as healthy.

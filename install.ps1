@@ -69,6 +69,16 @@ $report = New-Object System.Collections.Generic.List[string]
 
 # --- copying ---------------------------------------------------------------
 
+# Hashed with .NET rather than Get-FileHash. Windows PowerShell 5.1 started
+# from PowerShell 7 inherits a module path whose Microsoft.PowerShell.Utility it
+# cannot load, and Get-FileHash comes from that module; the class is always here.
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+
+function Get-ContentHash {
+    param([string]$Path)
+    return [System.BitConverter]::ToString($sha256.ComputeHash([System.IO.File]::ReadAllBytes($Path)))
+}
+
 function Copy-One {
     param([string]$Relative)
 
@@ -85,9 +95,7 @@ function Copy-One {
         return
     }
 
-    $left = Get-FileHash -LiteralPath $source -Algorithm SHA256
-    $right = Get-FileHash -LiteralPath $destination -Algorithm SHA256
-    if ($left.Hash -eq $right.Hash) {
+    if ((Get-ContentHash $source) -eq (Get-ContentHash $destination)) {
         $report.Add("same $Relative")
         return
     }

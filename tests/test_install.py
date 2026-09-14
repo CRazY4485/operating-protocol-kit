@@ -62,6 +62,19 @@ def run_installer(installer: str, target: Path) -> subprocess.CompletedProcess[s
     )
 
 
+def test_install_ps1_does_not_depend_on_get_filehash() -> None:
+    # Windows PowerShell 5.1 started from PowerShell 7 - every step on a GitHub
+    # Windows runner, or `powershell -File` typed in a PowerShell 7 terminal -
+    # inherits a module path it cannot load Get-FileHash from, and the install
+    # failed there. That environment cannot be built without PowerShell 7, so
+    # the kit-tests workflow's Windows job is where the behaviour is proven;
+    # this keeps the dependency from coming back.
+    code = [line for line in (KIT / "install.ps1").read_text(encoding="utf-8").splitlines()
+            if not line.lstrip().startswith("#")]
+
+    assert [line for line in code if "Get-FileHash" in line] == []
+
+
 def proven_interpreter(result: subprocess.CompletedProcess[str]) -> str:
     match = re.search(r"^Gate interpreter: (\S+) \(", result.stdout, re.MULTILINE)
     assert match, result.stdout + result.stderr

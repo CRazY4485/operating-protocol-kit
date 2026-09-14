@@ -2,8 +2,11 @@
 # never copied into a project; document-gate.yml is the one that is.
 name: Kit tests
 
+# Pull requests, and pushes to the default branch: a branch push that has a pull
+# request would otherwise run the whole matrix twice.
 on:
   push:
+    branches: [main, master]
   pull_request:
 
 permissions:
