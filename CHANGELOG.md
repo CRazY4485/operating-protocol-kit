@@ -23,6 +23,16 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
   then had no working hooks. `python3` is the only candidate name that exists on all three
   systems. Both installers now probe `python3`, `python`, `py` in the order `.githooks/pre-commit`
   always has, and print a note whenever they write a name other than `python3`.
+- **`git clean` is denied outright, and force flags are matched in any position.** 3.0.0 turned
+  `git clean -f*` into `git clean -f *`. Under Claude Code's documented wildcard rules the space
+  is part of the rule, so `git clean -fdx` — the most common destructive spelling — stopped
+  matching, and `-df` and `-xdf` never had. Enumerating flags cannot be complete, which is the
+  reason 3.0.0 gave for denying `rm` outright, so `git clean` now gets the same treatment. The
+  push rules matched only a force flag written straight after `push`: `git push origin main
+  --force`, `git push origin main -f` and a `+main` refspec all passed. They are now
+  `git push *--force*`, `git push -f*`, `git push * -f*` and `git push *+*`, and
+  `git reset --hard *` is `git reset *--hard*`. Every git rule keeps its `PowerShell` twin.
+- **`find … -delete`, `truncate` and `shred` are denied** for `Bash`, beside `rm`.
 
 ### Added
 

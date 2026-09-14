@@ -104,8 +104,10 @@ and secret-file reads are therefore configuration in `.claude/settings.json`, no
 
 Those rules match the command text of a tool call, so they have a documented edge: a rule covers
 the spellings it names, and `Bash` and `PowerShell` are separate prefixes needing separate rules.
-That is why `rm` is denied outright rather than as `rm -rf`, and why every destructive git rule is
-written twice. It is also why they stop at the tool boundary — a permission rule governs what
+That is why `rm` and `git clean` are denied outright rather than flag by flag, why the force flags
+of `git push` and the `--hard` of `git reset` are matched wherever they stand in the command, and
+why every destructive git rule is written twice. `tests/test_settings.py` lists the spellings each
+rule must catch and the everyday commands it must not. It is also why they stop at the tool boundary — a permission rule governs what
 Claude runs, not what a script Claude ran goes on to do. For enforcement below that line, Anthropic
 points at [sandboxing](https://code.claude.com/docs/en/sandboxing), which is an OS-level boundary
 and outside this kit's scope.
