@@ -81,6 +81,17 @@ the voice of deliverables, which it never did.
   is an error, and the starting figure stays in force for that file, so a typo can never lift a
   budget silently.
 
+### Changed
+
+- **`.claude/rules/markdown.md` holds writing rules and nothing else.** It carried a `## Gate`
+  section — the document gate's checks, and its two enforcement layers — plus clauses naming the
+  tool behind individual rules, and an opening sentence on how rule files load. The layers
+  repeated `CLAUDE.md`, *Quality gates*, and the loading sentence repeated *Session hygiene*; the
+  list of checks belongs beside the checks, at the top of `check-docs.py`, where `CLAUDE.md` now
+  points. The file loads whenever a Markdown file is read, in practice every task, so each of the
+  261 words it lost was context paid on every one. It is 655 words now, and a test keeps the kit's
+  machinery out of it.
+
 ### Added
 
 - **`.claude/tools/run-gates.py`, the one gate command.** `CLAUDE.md` said one command runs every
@@ -171,7 +182,7 @@ Merge:
   own hooks. Keep the hook `command` the installer wrote into the `.kit-new`, which is the
   interpreter it proved on this machine.
 - `CLAUDE.md` — *Quality gates*: the one gate command is `run-gates.py`, its log comes with a
-  hash, what the document gate checks is listed once, in *Gate* in `markdown.md`, and a language
+  hash, what the document gate checks is listed at the top of `check-docs.py`, and a language
   without a rule file points at `docs/templates/language-rules.md`. *Memory Bank*: Tier 1 budgets
   are tuned in `budgets.json`, not `techContext.md`.
 - `docs/BOOTSTRAP.md` — steps 3, 5, 6 and 10.

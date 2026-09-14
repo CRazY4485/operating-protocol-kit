@@ -1,16 +1,14 @@
 ---
-description: Authored-document voice, Markdown mechanics, and the document gate
+description: Authored-document voice and Markdown mechanics
 paths:
   - "**/*.md"
 ---
 
 # Markdown and Authored Documents
 
-These load when a Markdown file is read, not at every session start; `docs/BOOTSTRAP.md` step 3
-proves it happened by reading `logs/instructions-loaded.log`. They supplement `CLAUDE.md` and the
-Constitution; nothing here relaxes either. `CLAUDE.md`, *Authored documents*, holds the two process
-rules — approval before drafting, and the sub-agent brief. Everything about the prose itself lives
-here.
+These rules supplement `CLAUDE.md` and the Constitution; nothing here relaxes either. `CLAUDE.md`,
+*Authored documents*, holds the two process rules — approval before drafting, and the sub-agent
+brief. Everything about the prose itself lives here.
 
 ## Authored documents — the project's voice, never mine
 
@@ -27,9 +25,7 @@ its brief, and its text is reviewed against them before acceptance.
 - **No first person, no narrator** in a project deliverable. No "I recommend", "I believe", "let
   me", "we should". The document states the requirement, decision, or fact itself: "The system
   retries failed payments three times", not "I propose retrying failed payments three times". The
-  same holds in `memory-bank/`, which records facts: there the document gate warns on each phrase
-  the project lists in `voice.json`, in its working language. Everywhere else, and for all a phrase
-  list cannot see, the rule is held by review against the checkable test below.
+  same holds in `memory-bank/`, which records facts, never views.
 - **No meta-commentary.** Nothing about how the document was produced, what was considered and
   rejected in conversation, what will be done next, or what the reader might ask. A document is
   read long after the conversation ends; anything true only inside the conversation does not belong
@@ -48,17 +44,16 @@ its brief, and its text is reviewed against them before acceptance.
 
 ## Mechanics
 
-- **Encoding and shape.** UTF-8, LF endings, one trailing newline, no trailing whitespace —
-  enforced by `.gitattributes`, `.editorconfig`, and the gate. See the Constitution, *Portability*.
+- **Encoding and shape.** UTF-8, LF endings, one trailing newline, no trailing whitespace. See the
+  Constitution, *Portability*.
 - **Wrapping.** Governed documents wrap at 100 columns so a diff shows the sentence that changed
   rather than the whole paragraph. `CLAUDE.md` is the single stated exception: its budget is
   measured in lines, so wrapping it would corrupt the measure.
-- **Budgets** are declared in `.claude/tools/check-docs.py` and stated in `CLAUDE.md`,
-  *Document budgets*. A document over budget is compressed or its budget is challenged; it is
-  never quietly exceeded.
+- **Budgets.** A document over its budget is compressed or its budget is challenged; it is never
+  quietly exceeded. See `CLAUDE.md`, *Document budgets*.
 - **References name a section, decisions name a number.** A cross-reference is written in
-  italics and must match a real heading or bold label somewhere in the document set — the gate
-  resolves every one. A decision is cited as `decision 0004`.
+  italics and must match a real heading or bold label somewhere in the document set. A decision is
+  cited as `decision 0004`.
 - **Fenced code blocks carry a language tag** (` ```text ` where there is no better one), so a
   block is never mistaken for a heading by a parser or a reader.
 - **Tables** state units in the header where a column carries one. Numbers in a table are real
@@ -68,20 +63,3 @@ its brief, and its text is reviewed against them before acceptance.
 - **Working language.** Deliverables and `memory-bank/` are written in the working language
   recorded in `techContext.md`; `CLAUDE.md`, the Constitution, and the rule files are always
   English. Technical tokens are never translated.
-
-## Gate
-
-`python .claude/tools/check-docs.py` is the gate for every governed document and every template
-in `docs/templates/`, and part of the project's single gate command. It checks encoding and line
-shape, word and line budgets, cross-references and referenced paths, Tier 1 completeness, the
-decision index against the decision files, the gate log the last verified change cites, the
-phrases listed in `voice.json`, the presence of `.claude/KIT_VERSION`, and that
-`.claude/settings.json` parses and names a hook interpreter that starts. It exits non-zero on any
-error and prints every finding with its file and line.
-
-It runs in two places. A `PreToolUse` hook in `.claude/settings.json` runs it before any
-`git commit` for fast feedback, but Claude Code treats a hook it cannot start, or one that times
-out, as a non-blocking error and lets the commit proceed — so that layer fails open and is not
-the gate. `.githooks/pre-commit` is the gate: git refuses a commit on any non-zero exit, so a
-missing interpreter blocks the commit instead of skipping the check. Enable it once per clone
-with `git config core.hooksPath .githooks`. See `CLAUDE.md`, *Quality gates*.
