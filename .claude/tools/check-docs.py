@@ -14,8 +14,9 @@ Checks performed:
      heading or bold label somewhere in the document set.
   4. Referenced paths    - a Markdown link target, resolved against the linking
      document's directory, and a backticked path under a governed prefix exist.
-  5. Memory Bank state   - if memory-bank/ exists, every Tier 1 file exists and
-     is non-empty; if it does not, nothing is required (pre-bootstrap).
+  5. Memory Bank state   - if memory-bank/ exists, every Tier 1 file exists, is
+     non-empty and is within its budget (a warning), and memory-bank/budgets.json,
+     if present, is usable; if it does not, nothing is required (pre-bootstrap).
   6. Decision index      - every number in the index table has a matching
      decisions/NNNN-*.md file, and every such file appears in the index.
   7. Templates           - every template bootstrap copies exists, and the
@@ -53,6 +54,8 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+from kit_config import BUDGETS_FILE, TIER1_BUDGETS, load_budgets
 
 # --------------------------------------------------------------------------
 # Budgets. Words are the budgeted quantity because they track context cost;
@@ -96,13 +99,8 @@ OPTIONAL_DOCUMENTS = {
     ".claude/rules/mql5.md",
 }
 
-# Tier 1 files, read at the start of every task. Budgets are starting figures
-# and may be raised in techContext.md; see CLAUDE.md, *Memory Bank*.
-TIER1_BUDGETS: dict[str, int] = {
-    "memory-bank/activeContext.md": 400,
-    "memory-bank/progress.md": 650,
-    "memory-bank/decisions/decisions.md": 400,
-}
+# Tier 1 files and their budgets live in kit_config.py beside this file, which
+# the SessionStart hook reads too; a project sets its own in memory-bank/budgets.json.
 
 # Templates are copied into every project and, at bootstrap, into memory-bank/,
 # so they are held to the same shape as the documents that name them.
@@ -371,7 +369,10 @@ def check_memory_bank(root: Path) -> None:
     bank = root / "memory-bank"
     if not bank.exists():
         return
-    for relative, max_words in TIER1_BUDGETS.items():
+    budgets, project_set, problems = load_budgets(root)
+    for problem in problems:
+        error(BUDGETS_FILE, 0, problem)
+    for relative, max_words in budgets.items():
         path = root / relative
         if not path.exists():
             error(relative, 0, "Tier 1 file is missing while memory-bank/ exists (see BOOTSTRAP.md)")
@@ -381,7 +382,11 @@ def check_memory_bank(root: Path) -> None:
             error(relative, 0, "Tier 1 file is empty")
             continue
         words = len(text.split())
-        if words > max_words:
+        if words <= max_words:
+            continue
+        if relative in project_set:
+            warn(relative, 0, f"{words} words exceeds its budget of {max_words}, set in {BUDGETS_FILE}")
+        else:
             warn(relative, 0, f"{words} words exceeds the starting budget of {max_words}")
 
 

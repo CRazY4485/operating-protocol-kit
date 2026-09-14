@@ -24,7 +24,11 @@ DEVELOPMENT_ONLY = ("tests/", ".github/")
 
 def load_script(relative: Path, name: str) -> ModuleType:
     """A kit script as a module, for reading its declared figures rather than copying them."""
-    spec = importlib.util.spec_from_file_location(name, KIT / relative)
+    path = KIT / relative
+    # Run as a program, a script finds its sibling modules on sys.path[0].
+    if str(path.parent) not in sys.path:
+        sys.path.insert(0, str(path.parent))
+    spec = importlib.util.spec_from_file_location(name, path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module  # dataclasses resolves annotations through it

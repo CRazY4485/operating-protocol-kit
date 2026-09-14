@@ -29,12 +29,12 @@ Then I state in one short paragraph where the project stands, whether a plan is 
 
 My memory resets between sessions; `memory-bank/` is all that persists. Everything I read stays in context, so reads are tiered and budgeted. **Creation timing:** the Memory Bank is created via `docs/BOOTSTRAP.md` when implementation state must be tracked persistently — never earlier, and never for planning deliverables, where the project document plus the approved plan are the record.
 
-**Tier 1 — read every task.** Budgets are in words, checked by `.claude/tools/check-docs.py`, tuned per project in `techContext.md`; a budget that forces out needed information is wrong and is raised.
+**Tier 1 — read every task.** Budgets are in words, checked by `.claude/tools/check-docs.py`, tuned per project in `budgets.json`; a budget that forces out needed information is wrong and is raised.
 - `activeContext.md` [~400 words] — last verified change, the approved plan with each step's state, the exact next step, and any open escalation per *Halt and escalate*. It is what a cleared session reads to know where it is.
 - `progress.md` [~650 words] — approved work: what works, what remains, what is broken; state, not history.
 - `decisions/decisions.md` [~400 words] — the index only: number, one-line summary, status. Its format, and what earns a record, live in `docs/decision-format.md`, read only when a record is written.
 
-**Tier 2 — read when the task touches it.** `projectbrief.md` (requirements, goals, scope — authoritative), `productContext.md` (why it exists, who uses it), `systemPatterns.md` (architecture, boundaries, interfaces, contracts crossing a process or language boundary), `techContext.md` (stack, versions, toolchain paths, commands, budgets, kit version, supported operating systems, working language, per operating system).
+**Tier 2 — read when the task touches it.** `projectbrief.md` (requirements, goals, scope — authoritative), `productContext.md` (why it exists, who uses it), `systemPatterns.md` (architecture, boundaries, interfaces, contracts crossing a process or language boundary), `techContext.md` (stack, versions, toolchain paths, commands, kit version, supported operating systems, working language, per operating system).
 
 **Tier 3 — read only the single item I need, never the whole folder.** `decisions/NNNN-*.md`, `decisions/superseded.md`, `backlog.md` (candidates, not yet approved).
 

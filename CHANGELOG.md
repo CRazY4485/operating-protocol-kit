@@ -61,6 +61,16 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
   code block; it now points at *Structure of a record*. The gate found it the first time it read
   the templates.
 
+- **A project can set its Tier 1 budgets, as `CLAUDE.md` always said it could.** `CLAUDE.md`
+  said the budgets were "tuned per project in `techContext.md`", but nothing read that file: the
+  figures were constants in `check-docs.py`, repeated a second time in `session-start.py`. A
+  project that raised a budget and recorded it was still warned against the old figure. The
+  figures now live once, in `.claude/tools/kit_config.py`, which both scripts read, and a project
+  sets its own in `memory-bank/budgets.json` — a JSON object from Tier 1 file to words. A file
+  that is not JSON, names a file that is not Tier 1, or gives anything but a positive whole number
+  is an error, and the starting figure stays in force for that file, so a typo can never lift a
+  budget silently.
+
 ### Added
 
 - **The document gate checks `.claude/settings.json`.** A file that is not valid JSON is an
@@ -103,14 +113,16 @@ Fixes from the enforcement audit in issue #3, together with four defects found w
 Replace outright — a project has no reason to have edited them: `.claude/tools/check-docs.py`,
 `.claude/hooks/session-start.py`, `.claude/rules/markdown.md`, `docs/templates/activeContext.md`
 and `docs/templates/superseded.md`. New files, copied as they are:
-`docs/templates/language-rules.md` and `.github/workflows/document-gate.yml`.
+`.claude/tools/kit_config.py`, which `check-docs.py` now needs, `docs/templates/language-rules.md`
+and `.github/workflows/document-gate.yml`.
 
 Merge:
 
 - `.claude/settings.json` — take the kit's `permissions.deny` list whole, and keep the project's
   own hooks. Keep the hook `command` the installer wrote into the `.kit-new`, which is the
   interpreter it proved on this machine.
-- `CLAUDE.md` — one sentence in *Quality gates*: the gate checks `.claude/settings.json`, not voice.
+- `CLAUDE.md` — one sentence in *Quality gates*: the gate checks `.claude/settings.json`, not
+  voice; and in *Memory Bank*, Tier 1 budgets are tuned in `budgets.json`, not `techContext.md`.
 - `docs/BOOTSTRAP.md` — steps 3 and 10.
 
 Then, beyond the merge:
@@ -118,6 +130,8 @@ Then, beyond the merge:
 - A `memory-bank/activeContext.md` made from the 3.x template still carries that template's
   preamble, about half of its 400-word budget. Replace the preamble with the two comments of the
   new template, and keep the `<!-- plan -->` anchor where it is.
+- A Tier 1 budget the project raised in `techContext.md` moves to `memory-bank/budgets.json`,
+  for example `{"memory-bank/progress.md": 900}`; the gate never read the old place.
 - On GitHub, make the job in `.github/workflows/document-gate.yml` a required status check.
 - Delete each `.kit-new` once merged; the gate warns about every one still present.
 

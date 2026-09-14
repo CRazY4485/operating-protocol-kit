@@ -77,6 +77,41 @@ def test_accepts_the_kits_hooks_path_written_absolute(repository: Path, tmp_path
     assert "NOT" not in line
 
 
+def memory_bank(root: Path, progress_words: int) -> None:
+    bank = root / "memory-bank"
+    (bank / "decisions").mkdir(parents=True)
+    (bank / "activeContext.md").write_bytes(b"# State\n")
+    (bank / "decisions" / "decisions.md").write_bytes(b"# Decisions\n")
+    (bank / "progress.md").write_bytes(("word " * progress_words).encode("utf-8"))
+
+
+def test_judges_a_tier1_file_against_the_starting_budget(tmp_path: Path) -> None:
+    memory_bank(tmp_path, progress_words=700)
+
+    report = state_report(tmp_path)
+
+    assert "memory-bank/progress.md: 700 words - OVER the 650-word budget" in report
+
+
+def test_judges_a_tier1_file_against_the_projects_budget(tmp_path: Path) -> None:
+    memory_bank(tmp_path, progress_words=700)
+    (tmp_path / "memory-bank" / "budgets.json").write_bytes(b'{"memory-bank/progress.md": 900}')
+
+    report = state_report(tmp_path)
+
+    assert "memory-bank/progress.md: 700 words" in report
+    assert "OVER" not in report
+
+
+def test_names_a_budgets_file_it_cannot_use(tmp_path: Path) -> None:
+    memory_bank(tmp_path, progress_words=10)
+    (tmp_path / "memory-bank" / "budgets.json").write_bytes(b"{ not json")
+
+    report = state_report(tmp_path)
+
+    assert "memory-bank/budgets.json: not used" in report
+
+
 def test_reads_the_plan_from_a_file_made_from_the_shipped_template(tmp_path: Path) -> None:
     bank = tmp_path / "memory-bank"
     bank.mkdir()

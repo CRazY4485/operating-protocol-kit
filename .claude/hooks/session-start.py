@@ -34,11 +34,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-TIER1 = {
-    "memory-bank/activeContext.md": 400,
-    "memory-bank/progress.md": 650,
-    "memory-bank/decisions/decisions.md": 400,
-}
+# The Tier 1 budgets come from the same module the document gate reads, so the
+# report and the gate cannot disagree about them. The import is guarded because
+# this hook must report even from a partial install.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+try:
+    from kit_config import BUDGETS_FILE, load_budgets
+except ImportError:
+    BUDGETS_FILE, load_budgets = "memory-bank/budgets.json", None
+
 PLAN_ANCHOR = re.compile(r"^\s*<!--\s*plan\s*-->\s*$", re.IGNORECASE)
 PLAN_HEADING = re.compile(r"^#{1,4}\s+.*approved plan", re.IGNORECASE)
 ANY_HEADING = re.compile(r"^#{1,4}\s+")
@@ -79,8 +83,12 @@ def version_report(root: Path) -> str:
 def memory_bank_report(root: Path) -> list[str]:
     if not (root / "memory-bank").exists():
         return ["memory-bank/: absent - the project is pre-implementation (CLAUDE.md, Session start)"]
-    lines = []
-    for relative, budget in TIER1.items():
+    if load_budgets is None:
+        return [".claude/tools/kit_config.py: MISSING - Tier 1 files and budgets cannot be read"]
+    budgets, _, problems = load_budgets(root)
+    lines = [f"{BUDGETS_FILE}: not used as written - {problem}; the starting budget applies there"
+             for problem in problems]
+    for relative, budget in budgets.items():
         text = read(root / relative)
         if not text:
             lines.append(f"{relative}: MISSING or empty - interrupted bootstrap")

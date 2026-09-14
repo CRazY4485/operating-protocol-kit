@@ -409,6 +409,55 @@ def test_warns_on_a_tier1_file_over_its_starting_budget(kit_tree: Path) -> None:
     assert f"{budget + 1} words exceeds the starting budget of {budget}" in run.output
 
 
+# --- project budgets ---------------------------------------------------------------
+
+BUDGETS_JSON = "memory-bank/budgets.json"
+
+
+def test_a_project_can_raise_a_tier1_budget(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, "memory-bank/progress.md", filler(700))
+    write(kit_tree, BUDGETS_JSON, '{"memory-bank/progress.md": 900}\n')
+
+    run = run_gate(kit_tree)
+
+    assert (run.errors, run.warnings) == (0, 0), run.output
+
+
+def test_names_the_projects_budget_when_it_is_exceeded(kit_tree: Path) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, "memory-bank/progress.md", filler(950))
+    write(kit_tree, BUDGETS_JSON, '{"memory-bank/progress.md": 900}\n')
+
+    run = run_gate(kit_tree)
+
+    assert f"950 words exceeds its budget of 900, set in {BUDGETS_JSON}" in run.output
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [
+        ("{ not json", "not valid JSON"),
+        ("[900]", "must be a JSON object"),
+        ('{"memory-bank/progres.md": 900}', "`memory-bank/progres.md` is not a Tier 1 file"),
+        ('{"memory-bank/progress.md": 0}', "must be a positive whole number"),
+        ('{"memory-bank/progress.md": "900"}', "must be a positive whole number"),
+        ('{"memory-bank/progress.md": 9.5}', "must be a positive whole number"),
+        ('{"memory-bank/progress.md": true}', "must be a positive whole number"),
+    ],
+    ids=["not json", "not an object", "unknown file", "zero", "string", "fraction", "boolean"],
+)
+def test_rejects_a_budgets_file_it_cannot_use(kit_tree: Path, content: str, message: str) -> None:
+    bootstrap(kit_tree)
+    write(kit_tree, BUDGETS_JSON, content + "\n")
+
+    run = run_gate(kit_tree)
+
+    assert run.code == 1, run.output
+    assert f"ERROR {BUDGETS_JSON}: " in run.output
+    assert message in run.output
+
+
 # --- decision index ----------------------------------------------------------------
 
 
