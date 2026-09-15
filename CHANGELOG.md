@@ -11,6 +11,24 @@ changed file beside the project's copy as `<name>.kit-new`, and copies the *Upgr
 every release newer than the project's into `.claude/KIT_UPGRADE.md`, since this file stays with
 the kit.
 
+## 4.0.1 — 2026-09-15
+
+A patch bump: it changes nothing a project is required to do.
+
+### Fixed
+
+- **The gate no longer takes another checkout's files for this one's.** To report a path written
+  without its directory, the gate walks the repository for the file it could have meant, and it
+  walked into `.claude/worktrees/`, where Claude Code's desktop app keeps each session's git
+  worktree, a full copy of the project. A path that existed only in such a copy was offered as the
+  real location and failed the gate, a real one was reported "(and 1 more)", and a `.kit-new` left
+  in a copy was reported as this checkout's unmerged file. `.claude/worktrees` is now left out of
+  that walk, by path, so a project folder that happens to be called `worktrees` is still searched.
+
+### Upgrading
+
+Replace outright: `.claude/tools/check-docs.py`. Nothing else changes.
+
 ## 4.0.0 — 2026-09-15
 
 Fixes from the enforcement audit in issue #3, and the defects found while checking it. It is a

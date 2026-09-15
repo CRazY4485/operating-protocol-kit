@@ -373,6 +373,41 @@ def test_the_shipped_tier1_templates_leave_room_under_their_budgets(kit_tree: Pa
 # --- unmerged kit files ----------------------------------------------------------------
 
 
+# --- other checkouts inside the repository ----------------------------------------------
+
+# Claude Code's desktop app keeps each session's git worktree here, a full copy
+# of the repository, and those files belong to another checkout.
+WORKTREE = ".claude/worktrees/session-1f2e"
+
+
+def test_suggests_a_path_from_this_checkout_only(kit_tree: Path) -> None:
+    write(kit_tree, f"{WORKTREE}/.claude/tools/check-docs.py", "# another checkout\n")
+    append(kit_tree, BOOTSTRAP, "Run `tools/check-docs.py`.\n")
+
+    run = run_gate(kit_tree)
+
+    assert "is incomplete; the file is at `.claude/tools/check-docs.py`" in run.output
+    assert "more)" not in run.output
+
+
+def test_does_not_offer_a_file_that_exists_only_in_another_checkout(kit_tree: Path) -> None:
+    write(kit_tree, f"{WORKTREE}/docs/extra/only-there.md", "# elsewhere\n")
+    append(kit_tree, BOOTSTRAP, "See `extra/only-there.md`.\n")
+
+    run = run_gate(kit_tree)
+
+    assert "worktrees" not in run.output
+    assert (run.errors, run.warnings) == (0, 0), run.output
+
+
+def test_does_not_report_the_unmerged_files_of_another_checkout(kit_tree: Path) -> None:
+    write(kit_tree, f"{WORKTREE}/.claude/settings.json.kit-new", "{}\n")
+
+    run = run_gate(kit_tree)
+
+    assert "worktrees" not in run.output
+
+
 def test_warns_while_kit_upgrade_steps_are_pending(kit_tree: Path) -> None:
     write(kit_tree, ".claude/KIT_UPGRADE.md", "# Kit upgrade 3.0.1 -> 4.0.0\n")
 

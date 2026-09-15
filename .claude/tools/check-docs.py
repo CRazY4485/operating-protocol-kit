@@ -186,6 +186,11 @@ PROJECT_FILES = {GATES_FILE, UPGRADE_NOTES}
 # tree in the corpus the gate would turn red on kit text nobody had touched,
 # and only after an install had already gone green.
 CORPUS_EXCLUDED = {".git", "memory-bank", "logs", "__pycache__", "node_modules"}
+# Other checkouts kept inside the repository, excluded by path rather than name.
+# Claude Code's desktop app keeps each session's git worktree under
+# .claude/worktrees/, a full copy of the project, whose files would otherwise be
+# offered as where a path really is, or reported as unmerged kit files.
+CORPUS_EXCLUDED_PATHS = {".claude/worktrees"}
 DECISION_FILE = re.compile(r"^(\d{4})-[a-z0-9-]+\.md$")
 
 SETTINGS = ".claude/settings.json"
@@ -312,8 +317,10 @@ def collect_repository_files(root: Path) -> list[str]:
     """Every file an incomplete reference could actually have meant."""
     found: list[str] = []
     for folder, folders, names in os.walk(root):
-        folders[:] = [name for name in folders if name not in CORPUS_EXCLUDED]
         base = Path(folder).relative_to(root)
+        folders[:] = [name for name in folders
+                      if name not in CORPUS_EXCLUDED
+                      and (base / name).as_posix() not in CORPUS_EXCLUDED_PATHS]
         found.extend((base / name).as_posix() for name in names)
     return sorted(found)  # sorted so the reported suggestion is deterministic
 
